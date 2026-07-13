@@ -1,9 +1,22 @@
 // Tablas de botín. Oro por enemigo + drops de arma, escalando con profundidad.
 import type { WeaponOpt } from "./catalog";
 
-// No todos los enemigos sueltan oro. Los animales rara vez cargan monedas —su valor son
-// sus materiales, que vendes—; los no-muertos y humanoides sí traen algo. Esto empuja la
-// economía a apoyarse también en vender botín y materiales, no solo en oro directo.
+// Frases al despejar una sala sin oro (los pobres diablos no traían nada). Puro sabor.
+export const NO_GOLD_LINES: string[] = [
+  "Este venía pobre.",
+  "Aquí no hay nada :C",
+  "Los acababan de contratar.",
+  "Ni un cochino cobre.",
+  "Se lo gastaron en la taberna, seguro.",
+  "Bolsillos vacíos, como su mirada.",
+  "Puros botones y pelusa.",
+  "Debían más de lo que traían.",
+  "El tesorero no vino hoy.",
+  "Trabajaban por amor al arte, parece.",
+  "Alguien llegó antes que tú.",
+  "Solo polvo y malas decisiones.",
+];
+export const rollNoGoldLine = (): string => NO_GOLD_LINES[Math.floor(Math.random() * NO_GOLD_LINES.length)];
 export function goldDropChance(kind: "undead" | "rodent" | "beast"): number {
   return kind === "undead" ? 0.65 : kind === "rodent" ? 0.10 : 0.15;
 }

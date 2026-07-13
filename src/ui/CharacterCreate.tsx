@@ -4,18 +4,10 @@ import {
   type Characteristics, type Creature,
 } from "../engine";
 import {
-  STARTER_WEAPONS, STAT_KEYS, STAT_ES, STAT_BUDGET, STAT_MIN, STAT_MAX, reqMet, toWeapon,
+  STARTER_WEAPONS, STAT_KEYS, STAT_ES, STAT_DESC, STAT_BUDGET, STAT_MIN, STAT_MAX, reqMet, toWeapon,
   type WeaponOpt,
 } from "../game/catalog";
 import { getAbility } from "../engine";
-
-// Qué hace cada característica (sacado de las fórmulas reales del motor).
-const STAT_DESC: Record<keyof Characteristics, string> = {
-  strength: "Energía máxima y regeneración por turno (mueves más golpes). También sube el daño de los ataques brutos.",
-  vitality: "Tu vida máxima. Cuánto castigo aguantas antes de caer.",
-  dexterity: "Precisión al pegar y evasión al esquivar. La velocidad y la mano fina.",
-  intelligence: "Precisión al pegar y qué tanto hallas al rebuscar salas. El ojo astuto.",
-};
 
 export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventory: WeaponOpt[]) => void }) {
   const [name, setName] = useState("");

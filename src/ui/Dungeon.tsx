@@ -3,7 +3,7 @@ import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, type Mats } from "../game/materials";
-import { goldForEnemy, goldDropChance, rollWeaponDrop } from "../game/loot";
+import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
@@ -75,6 +75,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const ambushReturn = useRef<"camp" | "cleared">("camp");
   const searchProgress = useRef(0);
   const runMats = useRef<Mats>(resume?.runMaterials ? { ...resume.runMaterials } : {});
+  const noGoldLine = useRef<string>(resume && (resume.roomGold ?? 0) === 0 && resume.phase === "cleared" ? rollNoGoldLine() : "");
 
   useEffect(() => { setStalkerPending(stalker.current != null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -149,6 +150,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
       if (Math.random() < goldDropChance(enemyKind(e))) g += goldForEnemy(depth.current);
     }
     runGoldRef.current += g; setRoomGold(g); setRunGold(runGoldRef.current);
+    noGoldLine.current = g > 0 ? "" : rollNoGoldLine();
   }
   function onDeath(killers: Creature[], cargadoFight: boolean) {
     if (!cargadoFight) {
@@ -274,7 +276,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
         <div className="panel">
           <div className="cap">Sala despejada</div>
           <div className="loot">
-            <div className="lootgold">{roomGold > 0 ? `◈ +${roomGold} oro` : "Sin oro — vende el botín y materiales"}</div>
+            <div className="lootgold">{roomGold > 0 ? `◈ +${roomGold} oro` : <span className="nogold">{noGoldLine.current || "Sin oro esta vez."}</span>}</div>
             {drop ? (
               <div className={"dropcard" + (picked ? " done" : "")}>
                 <div className="dropinfo"><b>{drop.name}</b><small>daño {drop.damage} · {moveText(drop.abilities)}</small></div>

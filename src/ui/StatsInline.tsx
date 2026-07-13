@@ -1,5 +1,5 @@
 import type { Creature, Characteristics } from "../engine";
-import { STAT_KEYS, STAT_ES } from "../game/catalog";
+import { STAT_KEYS, STAT_ES, STAT_DESC } from "../game/catalog";
 
 export function StatsInline({ player, points, onSpend }: {
   player: Creature; points: number; onSpend: (k: keyof Characteristics) => void;
@@ -9,7 +9,10 @@ export function StatsInline({ player, points, onSpend }: {
       <div className="statlist">
         {STAT_KEYS.map((k) => (
           <div className="statline" key={k}>
-            <span className="slname">{STAT_ES[k]}</span>
+            <div className="slnamewrap">
+              <span className="slname">{STAT_ES[k]}</span>
+              <span className="sldesc">{STAT_DESC[k]}</span>
+            </div>
             <b className="slval">{player.characteristics[k]}</b>
             {points > 0 ? <button className="step" onClick={() => onSpend(k)}>+</button> : <span className="stepspace" />}
           </div>

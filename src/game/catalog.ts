@@ -22,6 +22,13 @@ export const STAT_KEYS: (keyof Characteristics)[] = ["strength", "vitality", "de
 export const STAT_ES: Record<string, string> = {
   strength: "Fuerza", vitality: "Vitalidad", dexterity: "Destreza", intelligence: "Inteligencia",
 };
+// Qué hace cada característica (sacado de las fórmulas reales del motor).
+export const STAT_DESC: Record<keyof Characteristics, string> = {
+  strength: "Energía máxima y regeneración por turno (mueves más golpes). También sube el daño de los ataques brutos.",
+  vitality: "Tu vida máxima. Cuánto castigo aguantas antes de caer.",
+  dexterity: "Precisión al pegar y evasión al esquivar. La velocidad y la mano fina.",
+  intelligence: "Precisión al pegar y qué tanto hallas al rebuscar salas. El ojo astuto.",
+};
 export const STAT_BUDGET = 20;
 export const STAT_MIN = 1;
 export const STAT_MAX = 10;

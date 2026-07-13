@@ -50,3 +50,27 @@ Implicaciones técnicas (por qué es fase grande):
 - UI nueva: controles de navegación + minimapa.
 
 Notas: es probablemente el cambio más grande de todos — redefine el núcleo del crawl. Vale hacerlo cuando el resto de sistemas (economía, pueblo, némesis) estén asentados, porque toca la espina dorsal del dungeon. Encaja con la visión roguelike/MMO: mapas procedurales = rejugabilidad infinita.
+
+## Login con Google (Gmail) — partida multi-dispositivo
+Idea: iniciar sesión con cuenta de Google para continuar la misma partida en distintos dispositivos (celular, tablet, PC).
+
+Estado actual (por qué es un salto CORTO, no grande):
+- Ya usamos **Firebase con auth anónima** (FirebaseStore guarda en `saves/{uid}`). El guardado en la nube YA existe; el problema es que la auth anónima genera un uid distinto por dispositivo/instalación, así que hoy cada dispositivo es una partida separada y no se puede recuperar si borras la app.
+- El cambio es principalmente **cambiar auth anónima → Google Sign-In (Firebase Auth con GoogleAuthProvider)**. Con eso el `uid` es estable y el mismo en todos lados → la partida en `saves/{uid}` te sigue a cualquier dispositivo.
+
+Implicaciones a resolver cuando toque:
+- **UI de login**: pantalla/botón "Entrar con Google" antes del hub. Manejar estado no-autenticado.
+- **Migración de partidas anónimas existentes**: si alguien ya jugó anónimo y luego entra con Google, ofrecer vincular (Firebase `linkWithCredential`) para no perder el progreso anónimo. O al menos migrar el save local.
+- **Config Firebase real**: hoy firebaseConfig es placeholder (firebaseConfigured se activa al pegar la config). Requiere proyecto Firebase con Google provider habilitado + dominios autorizados (github.io).
+- **Modo invitado**: conservar opción de jugar sin login (anónimo/local) para no forzar cuenta.
+- **Reglas RTDB**: ya contempladas (`saves/{uid}` read/write == auth.uid); siguen sirviendo con uid de Google.
+- Opcional: además de Google, permitir otros providers (email, Apple) más adelante.
+
+Nota: es el habilitador natural de la visión MMO/mundo compartido — identidad estable de jugador = prerequisito para leaderboards, Overlords globales atribuidos a jugadores, etc.
+
+## Pendiente de balance — % de caída de oro (EN PRUEBA)
+Nox propuso 50% plano ("moneda al aire") en vez del actual por-tipo (esqueleto 65% / rata 10% / lobo 15%). Lo está probando antes de decidir.
+Opciones cuando decida:
+- A) 50% plano para todos: simple y claro, pierde el matiz temático (bestias=materiales).
+- B) Por tipo menos extremo: esqueleto ~60%, bestias/ratas ~35-40% — mantiene "no-muertos dan más oro" sin castigar tanto las criptas de bestias.
+Dial: goldDropChance en loot.ts.
