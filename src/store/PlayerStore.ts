@@ -1,6 +1,7 @@
 import type { Creature } from "../engine";
 import type { WeaponOpt } from "../game/catalog";
 import type { GearItem, EquipSlot } from "../game/gear";
+import type { Mats } from "../game/materials";
 import type { Cargado } from "../game/cargados";
 
 /** Foto de una bajada en curso, guardada en checkpoints seguros (campamento / sala despejada). */
@@ -12,6 +13,7 @@ export interface RunState {
   drop: WeaponOpt | null; picked: boolean; equipped: boolean; roomGold: number; searched: boolean;
   resting: boolean; campStartMs: number; hpAtCamp: number; ambushAtSec: number | null;
   stalkerId: string | null; defeated: string[]; recovered: WeaponOpt[];
+  runMaterials: Mats;
 }
 
 export interface SavedGame {
@@ -23,6 +25,7 @@ export interface SavedGame {
   gear: GearItem[];
   equipped: Partial<Record<EquipSlot, string>>;
   cargados: Cargado[];
+  materials: Mats;
   run: RunState | null;
   xp: number;
   points: number;

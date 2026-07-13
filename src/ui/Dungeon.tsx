@@ -1,7 +1,8 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
-import { makeDungeonGroup, rollRoomCount } from "../game/enemies";
+import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
+import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, type Mats } from "../game/materials";
 import { goldForEnemy, rollWeaponDrop } from "../game/loot";
 import { xpForEnemy } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
@@ -20,6 +21,7 @@ export interface RunResult {
   player: Creature; outcome: "won" | "dead"; runGold: number; potions: number;
   inventory: WeaponOpt[]; runXp: number; points: number;
   newCargado: Cargado | null; defeatedCargados: string[]; recoveredWeapons: WeaponOpt[];
+  materials: Mats;
 }
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
@@ -72,6 +74,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const searchGoldAmt = useRef(0);
   const ambushReturn = useRef<"camp" | "cleared">("camp");
   const searchProgress = useRef(0);
+  const runMats = useRef<Mats>(resume?.runMaterials ? { ...resume.runMaterials } : {});
 
   useEffect(() => { setStalkerPending(stalker.current != null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -83,6 +86,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
       phase: "camp", drop, picked, equipped, roomGold, searched,
       resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
       stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
+      runMaterials: runMats.current,
       ...over,
     };
   }
@@ -164,6 +168,8 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     if (!res.survived) { onDeath(group, !!wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(1); }
     else awardKill(group.length);
+    const kind = enemyKind(group[0] ?? working.current);
+    runMats.current = mergeMats(runMats.current, rollRoomMaterials(kind, depth.current));
     const d = rollWeaponDrop(depth.current);
     setDrop(d); setPicked(false); setEquipped(false);
     setSearched(false); setSearching(false); setSearchText(null); searchProgress.current = 0;
@@ -223,6 +229,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
       player: wp, outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
       runXp: runXp.current, points: pointsRef.current,
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
+      materials: runMats.current,
     });
   }
 
@@ -255,7 +262,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
 
       {phase === "ambush" && ambushGroup && (
         <>
-          <div className="ambushbanner">¡Emboscada! Te descubrieron mientras acampabas.</div>
+          <div className="ambushbanner">¡Emboscada! Te descubrieron mientras {ambushReturn.current === "cleared" ? "rebuscabas la sala" : "acampabas"}.</div>
           <Combat key={`a${stage}r${roomInStage}`} player={wp} enemies={ambushGroup} potions={potionsRef.current} onEnd={handleAmbushEnd} />
         </>
       )}

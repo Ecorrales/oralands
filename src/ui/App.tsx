@@ -14,6 +14,7 @@ import { EquipPanel } from "./EquipPanel";
 import { Shop } from "./Shop";
 import { Forge } from "./Forge";
 import { canForge, type Recipe } from "../game/forge";
+import { mergeMats, type Mats } from "../game/materials";
 import { MAX_CARGADOS, type Cargado } from "../game/cargados";
 import type { RunResult } from "./Dungeon";
 
@@ -30,6 +31,7 @@ export function App() {
   const [gear, setGear] = useState<GearItem[]>([]);
   const [equipped, setEquipped] = useState<Equipped>({});
   const [cargados, setCargados] = useState<Cargado[]>([]);
+  const [materials, setMaterials] = useState<Mats>({});
   const [xp, setXp] = useState(0);
   const [points, setPoints] = useState(0);
   const [showStats, setShowStats] = useState(false);
@@ -42,6 +44,7 @@ export function App() {
   const runRef = useRef<RunState | null>(null);
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
+  const materialsRef = useRef<Mats>({});
 
   const itemsOf = (g: GearItem[], eq: Equipped): GearItem[] =>
     (Object.values(eq).filter(Boolean) as string[]).map((id) => g.find((x) => x.id === id)).filter(Boolean) as GearItem[];
@@ -63,6 +66,7 @@ export function App() {
         setPlayer(derive(g.player, gr, eq));
         setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));
         setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
+        materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
         setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
         const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
         setScreen(savedRun ? "dungeon" : "hub");
@@ -74,7 +78,7 @@ export function App() {
     store.save({
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
-      run: runRef.current, xp: x, points: pts, savedAt: new Date().toISOString(),
+      materials: materialsRef.current, run: runRef.current, xp: x, points: pts, savedAt: new Date().toISOString(),
     });
 
   function onCheckpoint(rs: RunState) {
@@ -84,6 +88,7 @@ export function App() {
 
   async function handleCreate(p: Creature, inv: WeaponOpt[]) {
     gearRef.current = []; equippedRef.current = {}; setGear([]); setEquipped({});
+    materialsRef.current = {}; setMaterials({});
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
     await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); setScreen("hub");
@@ -91,7 +96,7 @@ export function App() {
   async function handleNew() {
     await store.clear(); setPlayer(null); setGold(0); setPotions(STARTING_POTIONS); setInventory([]);
     gearRef.current = []; equippedRef.current = {}; setGear([]); setEquipped({});
-    setXp(0); setPoints(0); setCargados([]); runRef.current = null; setRun(null); setScreen("create");
+    setXp(0); setPoints(0); setCargados([]); materialsRef.current = {}; setMaterials({}); runRef.current = null; setRun(null); setScreen("create");
   }
   async function handleEquip(w: WeaponOpt) {
     if (!player) return;
@@ -168,25 +173,21 @@ export function App() {
 
   function forgeItem(r: Recipe) {
     if (!player) return;
-    const chk = canForge(r, gold, inventory, player.characteristics);
+    const chk = canForge(r, gold, materials, player.characteristics);
     if (!chk.ok) return;
-    let inv = [...inventory];
-    for (const m of r.materials) {
-      for (let n = 0; n < m.qty; n++) {
-        const idx = inv.findIndex((w) => w.id === m.id);
-        if (idx >= 0) inv = inv.slice(0, idx).concat(inv.slice(idx + 1));
-      }
-    }
+    const mats = { ...materials };
+    for (const m of r.materials) mats[m.id] = (mats[m.id] ?? 0) - m.qty;
+    materialsRef.current = mats; setMaterials(mats);
     const ng = gold - r.gold;
     if (r.kind === "weapon" && r.weapon) {
-      inv = [...inv, r.weapon];
+      const inv = [...inventory, r.weapon];
       setInventory(inv); setGold(ng); persist(player, ng, potions, inv, xp, points, cargados);
     } else if (r.kind === "armor" && r.gear) {
       const g = r.gear;
       const gr = gear.some((x) => x.id === g.id) ? gear : [...gear, g];
       const eq = { ...equipped, [g.slot]: g.id };
-      gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq); setInventory(inv); setGold(ng);
-      const next = derive(player, gr, eq); setPlayer(next); persist(next, ng, potions, inv, xp, points, cargados);
+      gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq); setGold(ng);
+      const next = derive(player, gr, eq); setPlayer(next); persist(next, ng, potions, inventory, xp, points, cargados);
     }
   }
 
@@ -198,6 +199,8 @@ export function App() {
     raised.hp = raised.maxHp; raised.energy = raised.maxEnergy;
     const next = derive(raised);
     runRef.current = null; setRun(null);
+    const newMats = mergeMats(materialsRef.current, r.materials);
+    materialsRef.current = newMats; setMaterials(newMats);
     const inv = [...r.inventory, ...r.recoveredWeapons];
     let carg = cargados.filter((c) => !r.defeatedCargados.includes(c.id));
     if (r.newCargado) { if (carg.length >= MAX_CARGADOS) carg = carg.slice(1); carg = [...carg, r.newCargado]; }
@@ -220,13 +223,13 @@ export function App() {
 
       {screen === "loading" && <p className="sub">Cargando…</p>}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
-      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} />}
+      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
       {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
       {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onClose={() => setShowShop(false)} />}
-      {showForge && player && <Forge player={player} gold={gold} inventory={inventory} onForge={forgeItem} onClose={() => setShowForge(false)} />}
+      {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}
     </div>
   );
 }

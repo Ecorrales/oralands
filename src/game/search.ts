@@ -4,7 +4,7 @@ import type { Creature } from "../engine";
 import { enemyKind } from "./enemies";
 
 export const SEARCH_SEC = 7;              // duración de la observación
-export const SEARCH_AMBUSH_CHANCE = 0.15; // hurgar hace ruido
+export const SEARCH_AMBUSH_CHANCE = 0.10; // hurgar hace ruido
 
 /** Probabilidad de hallar algo según destreza (hurgar) + inteligencia (notar lo que vale). */
 export const searchChance = (dex: number, int: number): number =>

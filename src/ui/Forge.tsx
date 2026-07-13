@@ -1,17 +1,17 @@
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
-import { RECIPES, countById, canForge, type Recipe } from "../game/forge";
+import { RECIPES, canForge, type Recipe } from "../game/forge";
 import { STAT_ES } from "../game/catalog";
+import { matName, matIcon, type Mats } from "../game/materials";
 
 const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
   Object.entries(req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 
-export function Forge({ player, gold, inventory, onForge, onClose }: {
-  player: Creature; gold: number; inventory: import("../game/catalog").WeaponOpt[];
+export function Forge({ player, gold, materials, onForge, onClose }: {
+  player: Creature; gold: number; materials: Mats;
   onForge: (r: Recipe) => void; onClose: () => void;
 }) {
-  const counts = countById(inventory);
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -20,11 +20,11 @@ export function Forge({ player, gold, inventory, onForge, onClose }: {
           <div className="cap" style={{ margin: 0 }}>⚒️ Herrería</div>
           <div className="goldbox">◈ {gold}</div>
         </div>
-        <p className="foot" style={{ marginTop: 0 }}>Entrega armas de tu mochila + oro para forjar equipo que no se compra en ningún lado.</p>
+        <p className="foot" style={{ marginTop: 0 }}>Entrega materiales (los juntas al pelear y rebuscar) + oro para forjar equipo que no se compra en ningún lado.</p>
 
         <div className="shopbody">
           {RECIPES.map((r) => {
-            const chk = canForge(r, gold, inventory, player.characteristics);
+            const chk = canForge(r, gold, materials, player.characteristics);
             const out = r.kind === "weapon" ? r.weapon! : r.gear!;
             const reqObj = r.kind === "weapon" ? r.weapon!.req : r.gear!.req;
             const reqOk = chk.req;
@@ -43,8 +43,8 @@ export function Forge({ player, gold, inventory, onForge, onClose }: {
                 <div className="forgecost">
                   <span className={"costchip" + (chk.gold ? "" : " miss")}>◈ {r.gold}</span>
                   {r.materials.map((m) => {
-                    const have = counts[m.id] || 0;
-                    return <span key={m.id} className={"costchip" + (have >= m.qty ? "" : " miss")}>{m.name} {have}/{m.qty}</span>;
+                    const have = materials[m.id] ?? 0;
+                    return <span key={m.id} className={"costchip" + (have >= m.qty ? "" : " miss")}>{matIcon(m.id)} {matName(m.id)} {have}/{m.qty}</span>;
                   })}
                 </div>
               </div>
