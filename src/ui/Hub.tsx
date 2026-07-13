@@ -5,7 +5,7 @@ import { matsSummary, type Mats } from "../game/materials";
 import type { Cargado } from "../game/cargados";
 import { InventoryInline } from "./InventoryInline";
 
-export function Hub({ player, gold, potions, inventory, equippedGear, cargados, onFight, onNew, onEquip, onOpenShop, onOpenForge, onOpenEquip }: {
+export function Hub({ player, gold, potions, inventory, equippedGear, cargados, materials, onFight, onNew, onEquip, onOpenShop, onOpenForge, onOpenEquip }: {
   player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equippedGear: GearItem[]; cargados: Cargado[];
   onFight: () => void; onNew: () => void; onEquip: (w: WeaponOpt) => void; onOpenShop: () => void; onOpenForge: () => void; onOpenEquip: () => void; materials: Mats;
 }) {
