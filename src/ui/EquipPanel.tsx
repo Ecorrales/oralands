@@ -4,7 +4,7 @@ import { SLOT_ES, SLOT_ROWS, reqMetGear, type GearItem, type EquipSlot } from ".
 
 // promedio de un dado "NdM" = N*(M+1)/2
 const avgDice = (spec: string): number => {
-  const m = /^(\d+)d(\d+)$/.exec(spec.trim());
+  const m = /^(\d+)d(\d+)$/.exec((spec ?? "").trim());
   if (!m) return 0;
   const n = +m[1], f = +m[2];
   return n * (f + 1) / 2;
@@ -21,7 +21,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
 
   // Ofensiva del arma equipada + características efectivas (incluye penalizaciones de equipo).
   const eff = effectiveCharacteristics(player);
-  const dmgDice = /^(\d+)d(\d+)$/.exec(player.weapon.damage.trim());
+  const dmgDice = /^(\d+)d(\d+)$/.exec((player.weapon.damage ?? "").trim());
   const dmgMin = dmgDice ? Math.round(Math.max(+dmgDice[1] * eff.strength, eff.strength / 2)) : 0;
   const dmgMax = dmgDice ? Math.round(+dmgDice[1] * +dmgDice[2] * eff.strength) : 0;
   const accEst = Math.round(2 * eff.intelligence * ((2 * eff.dexterity) + 1) / 2 + avgDice(player.weapon.accuracy));

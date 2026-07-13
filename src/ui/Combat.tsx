@@ -20,7 +20,7 @@ interface Battle {
   shake: boolean[]; flash: boolean[];
 }
 const KIND_ES: Record<string, string> = { undead: "no-muerto", rodent: "alimaña", beast: "bestia" };
-const avgDice = (spec: string): number => { const m = /^(\d+)d(\d+)$/.exec(spec.trim()); return m ? +m[1] * (+m[2] + 1) / 2 : 0; };
+const avgDice = (spec: string): number => { const m = /^(\d+)d(\d+)$/.exec((spec ?? "").trim()); return m ? +m[1] * (+m[2] + 1) / 2 : 0; };
 const pillClass = (m: Modifier) => m.kind === "skip" ? "stun" : m.kind === "stat" ? "debuff" : "dot";
 const movesOf = (c: Creature): AbilitySpec[] => {
   const ids = [...(c.weapon.abilities ?? ["smash"]), ...(c.grantedAbilities ?? [])];
@@ -70,7 +70,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
   const consumeSkip = (c: Creature): boolean => { const i = c.modifiers.findIndex((m) => m.kind === "skip"); if (i >= 0) { c.modifiers.splice(i, 1); return true; } return false; };
   const ageMods = (c: Creature) => { if (!Array.isArray(c.modifiers)) c.modifiers = []; c.modifiers.forEach((m) => m.duration--); c.modifiers = c.modifiers.filter((m) => m.duration > 0); };
   const tickDots = (c: Creature, who: Who) => {
-    for (const m of c.modifiers) {
+    for (const m of c.modifiers ?? []) {
       if (m.kind !== "dot") continue;
       const dmg = m.dotSpec ? diceroll(m.dotSpec) : (m.dmg ?? 0);
       if (dmg > 0) { c.hp = Math.max(0, c.hp - dmg); spawnFloat(who, "-" + dmg, "#e8635a"); doShake(who); pushLog(`${c.name} sufre ${m.label} — ${dmg}.`, "var(--danger)"); }

@@ -77,4 +77,4 @@ export function applyGear(c: Creature, items: GearItem[]): Creature {
 }
 
 export const reqMetGear = (g: GearItem, ch: Characteristics): boolean =>
-  (Object.keys(g.req) as (keyof Characteristics)[]).every((k) => (g.req[k] ?? 0) <= ch[k]);
+  (Object.keys(g.req ?? {}) as (keyof Characteristics)[]).every((k) => (g.req?.[k] ?? 0) <= ch[k]);

@@ -13,7 +13,7 @@ export function InventoryInline({ player, inventory, onEquip }: {
       {groups.map(({ item: w, qty }) => {
         const equipped = w.id === player.weapon.id;
         const ok = reqMet(w.req, player.characteristics);
-        const reqTxt = Object.entries(w.req)
+        const reqTxt = Object.entries(w.req ?? {})
           .map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${player.characteristics[k as keyof typeof player.characteristics] < (v as number) ? " ✗" : ""}`)
           .join(" · ");
         return (

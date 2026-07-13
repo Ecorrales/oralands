@@ -49,7 +49,7 @@ export function recomputeDerived(c: Creature): void {
 /** Características efectivas = base + modificadores "stat" activos + equipo (mín 1). */
 export function effectiveCharacteristics(c: Creature): Characteristics {
   const e: Characteristics = { ...c.characteristics };
-  for (const m of c.modifiers) {
+  for (const m of c.modifiers ?? []) {
     if (m.kind === "stat" && m.statChange) {
       for (const k of Object.keys(m.statChange) as (keyof Characteristics)[]) e[k] += m.statChange[k] ?? 0;
     }

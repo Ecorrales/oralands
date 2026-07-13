@@ -71,13 +71,13 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
         {STARTER_WEAPONS.map((w) => {
           const ok = reqMet(w.req, stats);
           const sel = effectiveWeapon.id === w.id;
-          const reqTxt = Object.entries(w.req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ");
+          const reqTxt = Object.entries(w.req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ");
           return (
             <button key={w.id} disabled={!ok}
               className={"opt" + (sel ? " sel" : "") + (ok ? "" : " locked")}
               onClick={() => setWeaponId(w.id)}>
               <b>{w.name}<span className="soft"> · {w.twoHanded ? "2 manos" : "1 mano"}</span></b>
-              <small>{w.abilities.map((id) => { const a = getAbility(id); return a ? `${a.name} ${a.energyCost}⚡` : id; }).join(" · ")}</small>
+              <small>{(w.abilities ?? []).map((id) => { const a = getAbility(id); return a ? `${a.name} ${a.energyCost}⚡` : id; }).join(" · ")}</small>
               <small className="req">{ok ? w.note : "req: " + reqTxt}</small>
             </button>
           );

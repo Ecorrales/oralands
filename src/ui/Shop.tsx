@@ -9,7 +9,7 @@ import { SHIELDS, SHOP_ARMOR, SLOT_ES, gearSellValue, reqMetGear, type GearItem,
 import { MATERIALS, matIcon, matName, matSell, type Mats } from "../game/materials";
 
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
-  Object.entries(req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
+  Object.entries(req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
 
 type SellCat = "general" | "armas" | "equipo" | "materiales";

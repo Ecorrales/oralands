@@ -37,9 +37,13 @@ export class FirebaseStore implements PlayerStore {
     this.auth = getAuth(app);
     this.db = getDatabase(app);
     this.ready = new Promise<string>((resolve, reject) => {
-      let done = false;
-      onAuthStateChanged(this.auth, (user) => { if (user && !done) { done = true; resolve(user.uid); } });
-      signInAnonymously(this.auth).catch(reject);
+      // onAuthStateChanged dispara con la sesión guardada (Google o invitado previo).
+      // Solo entramos como invitado NUEVO si de verdad no hay ninguna sesión — así no
+      // pisamos tu cuenta Google ni creamos anónimos huérfanos en cada apertura.
+      onAuthStateChanged(this.auth, (user) => {
+        if (user) resolve(user.uid);
+        else signInAnonymously(this.auth).catch(reject);
+      });
     });
   }
 

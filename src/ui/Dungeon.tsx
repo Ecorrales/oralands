@@ -262,7 +262,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   }
 
   const dropOk = drop ? reqMet(drop.req, wp.characteristics) : false;
-  const dropReqTxt = drop ? Object.entries(drop.req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ") : "";
+  const dropReqTxt = drop ? Object.entries(drop.req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ") : "";
   const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
   const hpBar = (c: Creature) => Math.max(0, c.hp / c.maxHp * 100) + "%";
   const hpColor = (c: Creature) => c.hp / c.maxHp < 0.2 ? "var(--danger)" : "var(--php)";

@@ -66,4 +66,4 @@ export function rollSearchMaterials(kind: "undead" | "rodent" | "beast", depth: 
 }
 
 export const matsSummary = (m: Mats): string =>
-  Object.entries(m).filter(([, n]) => n > 0).map(([id, n]) => `${matIcon(id)}${n} ${matName(id)}`).join(" · ");
+  Object.entries(m ?? {}).filter(([, n]) => n > 0).map(([id, n]) => `${matIcon(id)}${n} ${matName(id)}`).join(" · ");

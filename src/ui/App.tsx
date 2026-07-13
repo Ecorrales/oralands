@@ -67,7 +67,9 @@ export function App() {
       fixCreature(g.player);
       if (g.run?.player) fixCreature(g.run.player);
       // migración: armadura vieja (armor) -> gear.chest
-      let gr = g.gear ?? [];
+      // + re-hidratación: usamos la definición canónica de cada pieza (gearById) para
+      //   que req/defensa/statChange vengan completos aunque Firebase haya recortado campos.
+      let gr = (g.gear ?? []).map((it) => gearById(it.id) ?? it);
       let eq: Equipped = g.equipped ?? {};
       const oldArmor = (g as { armor?: { id: string } | null }).armor;
       if ((!g.gear || g.gear.length === 0) && oldArmor) {
