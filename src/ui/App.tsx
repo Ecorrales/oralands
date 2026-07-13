@@ -164,12 +164,11 @@ export function App() {
     if (!player) return;
     const g = gear.find((x) => x.id === id);
     if (!g) return;
+    if (equipped[g.slot] === id) return;   // no se puede vender lo que traes puesto
     const gr = gear.filter((x) => x.id !== id);
-    const eq = { ...equipped };
-    if (eq[g.slot] === id) delete eq[g.slot];   // si estaba puesto, se quita
     const ng = gold + gearSellValue(g);
-    gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq); setGold(ng);
-    const next = derive(player, gr, eq); setPlayer(next); persist(next, ng, potions, inventory, xp, points, cargados);
+    gearRef.current = gr; setGear(gr); setGold(ng);
+    persist(player, ng, potions, inventory, xp, points, cargados);
   }
 
   function sellMaterial(id: string, qty: number) {

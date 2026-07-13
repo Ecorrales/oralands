@@ -132,9 +132,11 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
                       <div className="shopitem" key={g.id}>
                         <div className="invinfo">
                           <b>{g.name}{on && <span className="eqtag"> puesto</span>}</b>
-                          <small>{SLOT_ES[g.slot].toLowerCase()} · def +{g.defense ?? 0}{g.evasion ? ` · ev ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""} · vende por ◈ {gearSellValue(g)}</small>
+                          <small>{SLOT_ES[g.slot].toLowerCase()} · def +{g.defense ?? 0}{g.evasion ? ` · ev ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""} · {on ? "quítatelo en Equipo para venderlo" : `vende por ◈ ${gearSellValue(g)}`}</small>
                         </div>
-                        <button className="small" onClick={() => onSellGear(g.id)}>Vender ◈{gearSellValue(g)}</button>
+                        {on
+                          ? <span className="lockmini">puesto</span>
+                          : <button className="small" onClick={() => onSellGear(g.id)}>Vender ◈{gearSellValue(g)}</button>}
                       </div>
                     );
                   })}

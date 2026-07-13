@@ -1,6 +1,6 @@
-import { useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import {
-  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate,
+  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
 } from "../engine";
 import { POTION_HEAL_FRACTION, POTION_COST } from "../game/catalog";
@@ -20,6 +20,7 @@ interface Battle {
   shake: boolean[]; flash: boolean[];
 }
 const KIND_ES: Record<string, string> = { undead: "no-muerto", rodent: "alimaña", beast: "bestia" };
+const avgDice = (spec: string): number => { const m = /^(\d+)d(\d+)$/.exec(spec.trim()); return m ? +m[1] * (+m[2] + 1) / 2 : 0; };
 const pillClass = (m: Modifier) => m.kind === "skip" ? "stun" : m.kind === "stat" ? "debuff" : "dot";
 const movesOf = (c: Creature): AbilitySpec[] => {
   const ids = [...(c.weapon.abilities ?? ["smash"]), ...(c.grantedAbilities ?? [])];
@@ -149,6 +150,12 @@ export function Combat({ player, enemies, potions, onEnd }: {
   }
   function groupDone() { const s = b.current; s.enemies.forEach((e) => { if (!isDead(e)) ageMods(e); }); endEnemy(); }
   function endEnemy() { if (isDead(b.current.player)) return endGame(false); startPlayerTurn(); }
+  function playerCanAct(): boolean {
+    const s = b.current;
+    const ability = bestAffordable(s.player, s.player.energy) !== null;
+    const potion = s.potions > 0 && s.player.hp < s.player.maxHp && s.player.energy >= POTION_COST;
+    return ability || potion;
+  }
   function startPlayerTurn() {
     const s = b.current;
     regenEnergy(s.player);
@@ -156,9 +163,22 @@ export function Combat({ player, enemies, potions, onEnd }: {
     if (isDead(s.player)) { force(); return endGame(false); }
     if (consumeSkip(s.player)) { pushLog(`${s.player.name} aturdido, pierde el turno.`, "var(--warn)"); ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 800); return; }
     if (isDead(s.enemies[s.target])) s.target = firstAlive();
+    if (!playerCanAct()) {
+      pushLog(`${s.player.name} no tiene energía para actuar.`, "var(--muted)");
+      ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900); return;
+    }
     s.phase = "player"; force();
   }
   function endGame(win: boolean) { b.current.phase = "over"; pushLog(win ? "¡Grupo derrotado!" : `${b.current.player.name} cae…`, win ? "var(--success)" : "var(--danger)"); force(); }
+
+  useEffect(() => {
+    const s = b.current;
+    if (s.phase === "player" && !playerCanAct()) {
+      pushLog(`${s.player.name} no tiene energía para actuar.`, "var(--muted)");
+      ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const s = b.current;
   const canAct = s.phase === "player";
@@ -203,12 +223,29 @@ export function Combat({ player, enemies, potions, onEnd }: {
       <div className="actions">
         {s.phase !== "over" ? (
           <>
-            {moves.map((ab) => (
-              <button key={ab.id} className="primary" disabled={!canAct || s.player.energy < ab.energyCost} title={ab.desc} onClick={() => useAbilityPlayer(ab)}>
-                {ab.name} ({ab.energyCost}⚡)
-              </button>
-            ))}
-            <button disabled={!canAct || s.potions <= 0 || s.player.hp >= s.player.maxHp || s.player.energy < POTION_COST} onClick={usePotion}>⚗ Poción {POTION_COST}⚡ ({s.potions})</button>
+            {(() => {
+              const eff = effectiveCharacteristics(s.player);
+              const avgWr = avgDice(s.player.weapon.damage);
+              const tgt = s.enemies[aliveTarget(s.target)] ?? s.enemies[0];
+              return moves.map((ab) => {
+                const raw = tgt ? Math.round(ab.damage(eff, tgt, avgWr)) : 0;
+                const dealt = tgt ? mitigate(raw, tgt.defense ?? 0) : raw;
+                const effPct = ab.effect && tgt ? Math.round(ab.effect.chance(eff, tgt)) : 0;
+                return (
+                  <button key={ab.id} className="primary move" disabled={!canAct || s.player.energy < ab.energyCost} title={ab.desc} onClick={() => useAbilityPlayer(ab)}>
+                    <span className="mvtop">{ab.name} <span className="mvcost">{ab.energyCost}⚡</span></span>
+                    <span className="mvmeta">≈{dealt} daño{ab.effect ? ` · ${ab.effect.label} ${effPct}%` : ""}</span>
+                  </button>
+                );
+              });
+            })()}
+            {(() => {
+              const usable = canAct && s.potions > 0 && s.player.hp < s.player.maxHp && s.player.energy >= POTION_COST;
+              const lowHp = s.player.maxHp > 0 && s.player.hp / s.player.maxHp < 0.2;
+              return (
+                <button className={usable && lowHp ? "blink" : ""} disabled={!canAct || s.potions <= 0 || s.player.hp >= s.player.maxHp || s.player.energy < POTION_COST} onClick={usePotion}>⚗ Poción {POTION_COST}⚡ ({s.potions})</button>
+              );
+            })()}
             <button disabled={!canAct} onClick={endTurn}>Terminar turno</button>
           </>
         ) : (

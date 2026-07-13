@@ -83,3 +83,10 @@ Idea de Nox: escribir historias para generar quests, y que las misiones NO sean 
 - Encaja fuerte con las criptas navegables (buscar "algo o alguien" implica explorar un mapa, no solo avanzar salas).
 - Posible generación: plantillas de quest + relleno procedural (objetivo, lugar, recompensa) o quests escritas a mano para momentos clave.
 - Es el pegamento narrativo que convierte "matar salas" en "tengo una razón para bajar".
+
+## Ataques de área / barrido (para combate en grupo)
+Hoy todas las habilidades pegan a UN solo objetivo (el motor no tiene concepto de multi-objetivo). Idea: ataques de área que peguen a varios enemigos con daño reducido, vs. ataques que concentran en uno.
+- Ejemplo: "Tajo amplio" barre 2-3 enemigos con menos daño c/u; "Estocada" concentra todo en uno. Decisión táctica: ¿reparto o concentro?
+- El nombre "Tajo" ya sugiere corte amplio pero hoy es single-target (disonancia nombre↔mecánica).
+- Requiere que el motor aprenda "objetivos múltiples" (AbilitySpec con un flag aoe / número de objetivos, y el combate aplique a varios).
+- Encaja perfecto con los grupos de enemigos ya existentes y complementa el uso del escudo para control de multitudes.

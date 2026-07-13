@@ -11,6 +11,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
   onFight: () => void; onNew: () => void; onEquip: (w: WeaponOpt) => void; onOpenShop: () => void; onOpenForge: () => void; onOpenEquip: () => void; materials: Mats;
 }) {
   const [bagTab, setBagTab] = useState<"armas" | "materiales">("armas");
+  const [confirmNew, setConfirmNew] = useState(false);
   const ownedMats = MATERIALS.filter((m) => (materials[m.id] ?? 0) > 0);
   return (
     <div className="panel">
@@ -85,7 +86,15 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         <button onClick={onOpenEquip}>Equipo</button>
         <button onClick={onOpenShop}>Tienda</button>
         <button onClick={onOpenForge}>Herrería</button>
-        <button onClick={onNew}>Nuevo personaje</button>
+        {confirmNew
+          ? (
+            <div className="confirmrow">
+              <span className="confirmq">¿Borrar a {player.name} y empezar de cero?</span>
+              <button className="small danger" onClick={onNew}>Sí, borrar</button>
+              <button className="small ghost" onClick={() => setConfirmNew(false)}>No</button>
+            </div>
+          )
+          : <button onClick={() => setConfirmNew(true)}>Nuevo personaje</button>}
       </div>
     </div>
   );
