@@ -6,6 +6,7 @@ import { goldForEnemy, rollWeaponDrop } from "../game/loot";
 import { xpForEnemy } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
+import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, biomeOf, searchOutcome, searchIntro } from "../game/search";
 import type { RunState } from "../store/PlayerStore";
 import { Combat } from "./Combat";
 import { StatsInline } from "./StatsInline";
@@ -45,6 +46,9 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const [resting, setResting] = useState(resume?.resting ?? false);
   const [ambushGroup, setAmbushGroup] = useState<Creature[] | null>(null);
   const [stalkerPending, setStalkerPending] = useState(false);
+  const [searched, setSearched] = useState(resume?.searched ?? false);
+  const [searching, setSearching] = useState(false);
+  const [searchText, setSearchText] = useState<string | null>(null);
 
   const working = useRef<Creature>(resume ? { ...resume.player, modifiers: [] } : { ...player, hp: player.maxHp, energy: player.maxEnergy, modifiers: [] });
   const potionsRef = useRef(resume?.potions ?? potions);
@@ -62,6 +66,12 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const newCargado = useRef<Cargado | null>(null);
   const defeated = useRef<string[]>(resume?.defeated ? [...resume.defeated] : []);
   const recovered = useRef<WeaponOpt[]>(resume?.recovered ? [...resume.recovered] : []);
+  const searchStart = useRef(0);
+  const searchAmbushAt = useRef<number | null>(null);
+  const searchFound = useRef(false);
+  const searchGoldAmt = useRef(0);
+  const ambushReturn = useRef<"camp" | "cleared">("camp");
+  const searchProgress = useRef(0);
 
   useEffect(() => { setStalkerPending(stalker.current != null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,7 +80,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
       stage, stageRooms, roomInStage, depth: depth.current,
       player: working.current, potions: potionsRef.current, inventory: invRef.current,
       runGold: runGoldRef.current, runXp: runXp.current, points: pointsRef.current,
-      phase: "camp", drop, picked, equipped, roomGold,
+      phase: "camp", drop, picked, equipped, roomGold, searched,
       resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
       stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
       ...over,
@@ -96,6 +106,28 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     }, 250);
     return () => clearInterval(id);
   }, [phase, resting]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // barra de observación al rebuscar la sala
+  useEffect(() => {
+    if (phase !== "cleared" || !searching) return;
+    const id = setInterval(() => {
+      const elapsed = (Date.now() - searchStart.current) / 1000;
+      if (searchAmbushAt.current != null && elapsed >= searchAmbushAt.current) {
+        searchAmbushAt.current = null; setSearching(false); ambushReturn.current = "cleared";
+        setAmbushGroup(makeDungeonGroup(depth.current, stage)); setPhase("ambush");
+        return;
+      }
+      searchProgress.current = Math.min(1, elapsed / SEARCH_SEC);
+      if (elapsed >= SEARCH_SEC) {
+        setSearching(false); setSearched(true);
+        if (searchFound.current) { runGoldRef.current += searchGoldAmt.current; setRunGold(runGoldRef.current); }
+        setSearchText(searchOutcome(biomeOf(group), searchFound.current) + (searchFound.current ? ` (+◈${searchGoldAmt.current})` : ""));
+        onCheckpoint(buildRun({ phase: "cleared", searched: true }));
+      }
+      force();
+    }, 200);
+    return () => clearInterval(id);
+  }, [phase, searching]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Genera la siguiente pelea: puede ser el cargado que acecha (al azar) o un grupo normal. */
   function nextFight(d: number, st: number): { enemies: Creature[]; cargado: Cargado | null } {
@@ -133,14 +165,18 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(1); }
     else awardKill(group.length);
     const d = rollWeaponDrop(depth.current);
-    setDrop(d); setPicked(false); setEquipped(false); setPhase("cleared");
-    onCheckpoint(buildRun({ phase: "cleared", drop: d, picked: false, equipped: false }));
+    setDrop(d); setPicked(false); setEquipped(false);
+    setSearched(false); setSearching(false); setSearchText(null); searchProgress.current = 0;
+    setPhase("cleared");
+    onCheckpoint(buildRun({ phase: "cleared", drop: d, picked: false, equipped: false, searched: false }));
   }
   function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
     if (!res.survived) { onDeath(ambushGroup ?? [], false); return; }
-    awardKill(ambushGroup?.length ?? 1); setAmbushGroup(null); setResting(false); ambushAt.current = null; setPhase("camp");
-    onCheckpoint(buildRun({ phase: "camp", resting: false }));
+    awardKill(ambushGroup?.length ?? 1); setAmbushGroup(null); setResting(false); ambushAt.current = null;
+    const back = ambushReturn.current;
+    setPhase(back);
+    onCheckpoint(buildRun({ phase: back, resting: false }));
   }
   function addToBag(d: WeaponOpt) { invRef.current = [...invRef.current, d]; }
   function pickUp(d: WeaponOpt) { addToBag(d); setPicked(true); onCheckpoint(buildRun({ phase: "cleared", picked: true })); }
@@ -153,10 +189,17 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   }
   function goCamp() { setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function startRest() {
-    hpAtCamp.current = working.current.hp; campStart.current = Date.now();
+    hpAtCamp.current = working.current.hp; campStart.current = Date.now(); ambushReturn.current = "camp";
     ambushAt.current = Math.random() < AMBUSH_CHANCE ? 4 + Math.random() * (REST_FULL_SEC * 0.7) : null;
     setResting(true);
     onCheckpoint(buildRun({ phase: "camp", resting: true }));
+  }
+  function startSearch() {
+    searchStart.current = Date.now(); searchProgress.current = 0;
+    searchFound.current = Math.random() < searchChance(wp.characteristics.dexterity, wp.characteristics.intelligence);
+    searchGoldAmt.current = searchFound.current ? searchGold(depth.current) : 0;
+    searchAmbushAt.current = Math.random() < SEARCH_AMBUSH_CHANCE ? 2 + Math.random() * (SEARCH_SEC * 0.6) : null;
+    setSearchText(null); setSearching(true);
   }
   function breakCamp() { setResting(false); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function continueDeeper() {
@@ -235,12 +278,27 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
               </div>
             ) : <div className="nodrop">Sin arma en esta sala.</div>}
           </div>
+
+          <div className="searchbox">
+            {searching ? (
+              <>
+                <p className="searchtxt">{searchIntro(biomeOf(group))}</p>
+                <div className="obsbar"><div style={{ width: (searchProgress.current * 100) + "%" }} /></div>
+                <div className="obslbl">Observando…</div>
+              </>
+            ) : searched ? (
+              <p className={"searchtxt" + (searchText && searchText.includes("+◈") ? " hit" : "")}>{searchText}</p>
+            ) : (
+              <button className="small ghost full" onClick={startSearch}>🔍 Rebuscar la sala</button>
+            )}
+          </div>
+
           <div className="bar" style={{ margin: "12px 0 4px" }}><div style={{ width: hpBar(wp), background: "var(--php)" }} /></div>
           <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥ <span className="soft">— no se cura entre salas</span></div>
           <div className="actions" style={{ marginTop: 14 }}>
             {isLastOfStage
-              ? <button className="primary" onClick={goCamp}>Llegar al campamento</button>
-              : <button className="primary" onClick={advance}>Avanzar a la sala {roomInStage + 2}</button>}
+              ? <button className="primary" disabled={searching} onClick={goCamp}>Llegar al campamento</button>
+              : <button className="primary" disabled={searching} onClick={advance}>Avanzar a la sala {roomInStage + 2}</button>}
           </div>
         </div>
       )}

@@ -8,7 +8,7 @@ export interface RunState {
   player: Creature; potions: number; inventory: WeaponOpt[];
   runGold: number; runXp: number; points: number;
   phase: "camp" | "cleared";
-  drop: WeaponOpt | null; picked: boolean; equipped: boolean; roomGold: number;
+  drop: WeaponOpt | null; picked: boolean; equipped: boolean; roomGold: number; searched: boolean;
   resting: boolean; campStartMs: number; hpAtCamp: number; ambushAtSec: number | null;
   stalkerId: string | null; defeated: string[]; recovered: WeaponOpt[];
 }
