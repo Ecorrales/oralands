@@ -303,3 +303,9 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .acctdot{width:7px;height:7px;border-radius:50%;background:#6b7280;flex-shrink:0}
 .acctdot.on{background:#5fbf7f}
 .acctmsg{width:100%;color:var(--accent);font-size:11px}
+
+/* pantalla de carga (resuelve identidad antes de cargar datos) */
+.loadscreen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:50vh}
+.loadspinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loadmsg{color:var(--muted);font-size:13px;text-align:center}

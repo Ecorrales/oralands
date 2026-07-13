@@ -50,6 +50,16 @@ export class FirebaseStore implements PlayerStore {
   private async uid(): Promise<string> {
     return this.auth.currentUser?.uid ?? this.ready;
   }
+
+  /** Espera a que Firebase resuelva la sesión (Google o invitado) y devuelve quién eres.
+   *  Se usa al arrancar: primero identidad, luego cargamos los datos de ESA cuenta. */
+  async waitForAuth(): Promise<AuthInfo> {
+    await this.ready;
+    const u = this.auth.currentUser;
+    return u
+      ? { uid: u.uid, email: u.email, isAnonymous: u.isAnonymous }
+      : { uid: await this.ready, email: null, isAnonymous: true };
+  }
   private async node() {
     return ref(this.db, `saves/${await this.uid()}`);
   }

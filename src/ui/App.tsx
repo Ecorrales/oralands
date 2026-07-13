@@ -88,15 +88,23 @@ export function App() {
   }
   const loadFromStore = () => { store.load().then(hydrate); };
 
-  useEffect(() => { loadFromStore(); }, []);
-
   // Sesión de Firebase (login con Google). Solo activo cuando Firebase está conectado.
   const [auth, setAuth] = useState<AuthInfo | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMsg, setAuthMsg] = useState<string | null>(null);
+
+  // Arranque: PRIMERO resolvemos la identidad (invitado vs Google), LUEGO cargamos
+  // los datos de esa cuenta. Así nunca cargamos algo local para cambiarlo después
+  // (eso era lo que podía duplicar personajes).
   useEffect(() => {
-    if (!firebaseConfigured) return;
-    return (store as FirebaseStore).onAuth(setAuth);
+    if (firebaseConfigured) {
+      const fb = store as FirebaseStore;
+      const unsub = fb.onAuth(setAuth);
+      fb.waitForAuth().then((info) => { setAuth(info); loadFromStore(); });
+      return unsub;
+    }
+    loadFromStore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function linkGoogle() {
@@ -300,7 +308,17 @@ export function App() {
       {levelMsg && screen === "hub" && <div className="lvlmsg" onClick={() => setLevelMsg(null)}>{levelMsg} <span className="soft">(toca para cerrar)</span></div>}
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
-      {screen === "loading" && <p className="sub">Cargando…</p>}
+      {screen === "loading" && (
+        <div className="loadscreen">
+          <div className="loadspinner" />
+          <p className="loadmsg">
+            {!firebaseConfigured ? "Cargando…"
+              : auth === null ? "Conectando…"
+              : auth.isAnonymous ? "Cargando partida de invitado…"
+              : `Cargando la partida de ${auth.email ?? "tu cuenta"}…`}
+          </p>
+        </div>
+      )}
       {firebaseConfigured && (screen === "create" || screen === "hub") && (
         <AccountBar auth={auth} busy={authBusy} msg={authMsg} onLink={linkGoogle} onSignOut={signOutGoogle} />
       )}
