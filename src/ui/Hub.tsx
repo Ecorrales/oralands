@@ -82,7 +82,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
       )}
 
       <div className="actions" style={{ marginTop: 14 }}>
-        <button className="primary" onClick={onFight}>Bajar a la cripta</button>
+        <button className="primary" onClick={onFight}>Entrar al calabozo</button>
         <button onClick={onOpenEquip}>Equipo</button>
         <button onClick={onOpenShop}>Tienda</button>
         <button onClick={onOpenForge}>Herrería</button>

@@ -14,7 +14,7 @@ export const searchChance = (dex: number, int: number): number =>
 export const searchGold = (depth: number): number =>
   2 + Math.floor(2 * Math.sqrt(depth)) + Math.floor(Math.random() * 3);
 
-type Biome = "cripta" | "madriguera" | "cueva";
+import type { Biome } from "./dungeons";
 export function biomeOf(enemies: Creature[]): Biome {
   const k = enemies.length ? enemyKind(enemies[0]) : "cueva" as const;
   return k === "undead" ? "cripta" : k === "rodent" ? "madriguera" : "cueva";
@@ -35,6 +35,11 @@ const TEXTS: Record<Biome, { intro: string; empty: string; found: string }> = {
     intro: "Estás dentro de una pequeña cueva natural, oscura, húmeda y con mucho eco.",
     empty: " Palpas las paredes y revisas los rincones… nada fuera de lo normal.",
     found: " Palpas las paredes… espera, ¿qué es eso? Unas monedas tiradas brillan en una grieta.",
+  },
+  ruinas: {
+    intro: "Estás entre ruinas derruidas, columnas caídas y escombros de una era olvidada.",
+    empty: " Escarbas entre los escombros y las losas rotas… nada de valor. Nada fuera de lo normal.",
+    found: " Escarbas entre los escombros… espera, ¿qué es eso? Algo de valor sobrevivió al derrumbe.",
   },
 };
 

@@ -14,6 +14,7 @@ export interface RunState {
   resting: boolean; campStartMs: number; hpAtCamp: number; ambushAtSec: number | null;
   stalkerId: string | null; defeated: string[]; recovered: WeaponOpt[];
   runMaterials: Mats;
+  dungeonId: string;
 }
 
 export interface SavedGame {

@@ -2,12 +2,13 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
+import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
-import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, biomeOf, searchOutcome, searchIntro } from "../game/search";
+import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, searchOutcome, searchIntro } from "../game/search";
 import type { RunState } from "../store/PlayerStore";
 import { Combat } from "./Combat";
 import { StatsInline } from "./StatsInline";
@@ -36,7 +37,8 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const [stageRooms, setStageRooms] = useState(() => resume?.stageRooms ?? rollRoomCount());
   const [roomInStage, setRoomInStage] = useState(resume?.roomInStage ?? 0);
   const depth = useRef(resume?.depth ?? 0);
-  const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1));
+  const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : pickDungeon());
+  const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
   const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
@@ -90,7 +92,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       phase: "camp", drop, picked, equipped, roomGold, searched,
       resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
       stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
-      runMaterials: runMats.current,
+      runMaterials: runMats.current, dungeonId: dungeon.current.id,
       ...over,
     };
   }
@@ -104,7 +106,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       const elapsed = (Date.now() - campStart.current) / 1000;
       if (ambushAt.current != null && elapsed >= ambushAt.current) {
         ambushAt.current = null; setResting(false);
-        setAmbushGroup(makeDungeonGroup(depth.current, stage)); setPhase("ambush");
+        setAmbushGroup(makeDungeonGroup(depth.current, stage, dungeon.current.kinds)); setPhase("ambush");
         return;
       }
       const healed = Math.min(wp.maxHp, hpAtCamp.current + (elapsed / REST_FULL_SEC) * wp.maxHp);
@@ -124,7 +126,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
         searchAmbushAt.current = null; setSearching(false); setSearched(true);
         setSearchText("Te emboscaron mientras rebuscabas — no alcanzaste a hallar nada.");
         ambushReturn.current = "cleared";
-        setAmbushGroup(makeDungeonGroup(depth.current, stage)); setPhase("ambush");
+        setAmbushGroup(makeDungeonGroup(depth.current, stage, dungeon.current.kinds)); setPhase("ambush");
         return;
       }
       searchProgress.current = Math.min(1, elapsed / SEARCH_SEC);
@@ -137,7 +139,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           runMats.current = mergeMats(runMats.current, mats);
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
-        setSearchText(searchOutcome(biomeOf(group), searchFound.current) + extra);
+        setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
       force();
@@ -151,7 +153,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       const c = stalker.current; stalker.current = null; setStalkerPending(false);
       return { enemies: [{ ...c.creature, modifiers: [] }], cargado: c };
     }
-    return { enemies: makeDungeonGroup(d, st), cargado: null };
+    return { enemies: makeDungeonGroup(d, st, dungeon.current.kinds), cargado: null };
   }
 
   function awardKill(enemies: Creature[]) {
@@ -263,13 +265,17 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const dropReqTxt = drop ? Object.entries(drop.req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ") : "";
   const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
   const hpBar = (c: Creature) => Math.max(0, c.hp / c.maxHp * 100) + "%";
+  const hpColor = (c: Creature) => c.hp / c.maxHp < 0.2 ? "var(--danger)" : "var(--php)";
 
   return (
     <div>
       <div className="crawlbar">
-        <span>Cripta · etapa {stage} · sala {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
+        <span>{dungeon.current.short} · etapa {stage} · sala {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
         <span className="goldmini">Nv {wp.level} · ◈ {runGold} <span className="soft">sin asegurar</span> · ⚗ {potionsRef.current}</span>
       </div>
+      {stage === 1 && roomInStage === 0 && phase === "fight" && (
+        <div className="dungeonintro"><b>{dungeon.current.name}</b><span>{dungeon.current.desc}</span></div>
+      )}
       {levelUp && phase !== "result" && (
         <div className="levelbanner" onClick={() => setLevelUp(null)}>⬆ {levelUp} <span className="soft">(toca para cerrar)</span></div>
       )}
@@ -330,7 +336,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           <div className="searchbox">
             {searching ? (
               <>
-                <p className="searchtxt">{searchIntro(biomeOf(group))}</p>
+                <p className="searchtxt">{searchIntro(dungeon.current.biome)}</p>
                 <div className="obsbar"><div style={{ width: (searchProgress.current * 100) + "%" }} /></div>
                 <div className="obslbl">Observando…</div>
               </>
@@ -341,7 +347,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             )}
           </div>
 
-          <div className="bar" style={{ margin: "12px 0 4px" }}><div style={{ width: hpBar(wp), background: "var(--php)" }} /></div>
+          <div className="bar" style={{ margin: "12px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
           <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥ <span className="soft">— no se cura entre salas</span></div>
           <div className="actions" style={{ marginTop: 14 }}>
             {isLastOfStage
@@ -354,7 +360,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       {phase === "camp" && (
         <div className="panel">
           <div className="cap">🏕️ Campamento · etapa {stage} despejada</div>
-          <div className="bar" style={{ margin: "6px 0 4px" }}><div style={{ width: hpBar(wp), background: "var(--php)" }} /></div>
+          <div className="bar" style={{ margin: "6px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
           <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥</div>
           {resting ? (
             <>

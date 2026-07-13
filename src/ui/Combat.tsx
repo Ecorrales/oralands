@@ -212,7 +212,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
         {s.flashPlayer && <div className="flashfx" />}
         {playerFloat && <div className="dmg" key={playerFloat.id} style={{ right: 12, left: "auto", color: playerFloat.color }}>{playerFloat.text}</div>}
         <div className="rw"><b>{s.player.name}</b><span>{Math.max(0, Math.round(s.player.hp))} / {s.player.maxHp}</span></div>
-        <div className="bar"><div style={{ width: Math.max(0, s.player.hp / s.player.maxHp * 100) + "%", background: "var(--php)" }} /></div>
+        <div className="bar"><div style={{ width: Math.max(0, s.player.hp / s.player.maxHp * 100) + "%", background: s.player.hp / s.player.maxHp < 0.2 ? "var(--danger)" : "var(--php)" }} /></div>
         <div className="rw" style={{ marginTop: 6 }}><span style={{ fontSize: 11 }}>energía</span><span>{s.player.energy} / {s.player.maxEnergy} ⚡</span></div>
         <div className="bar" style={{ height: 6 }}><div style={{ width: Math.max(0, s.player.energy / s.player.maxEnergy * 100) + "%", background: "var(--energy)" }} /></div>
         <div className="mods">{s.player.modifiers.map((m, i) => <span key={i} className={"pill " + pillClass(m)}>{m.label} {m.duration}t</span>)}</div>
