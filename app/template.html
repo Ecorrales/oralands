@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dungeon · motor real</title>
+<style>
+  :root{--bg:#14110d;--panel:#1e1a14;--panel2:#262019;--line:#3a3227;--ink:#e8e0d2;--muted:#9a8f7d;--dim:#6f6656;
+    --accent:#c9a24a;--accent-ink:#1a1509;--danger:#c0453a;--success:#7fae5a;--warn:#d8a24a;
+    --hp:#c0453a;--php:#7fae5a;--energy:#c9a24a;--track:#2a221a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(120% 80% at 50% 0%,#1c1812 0%,#100d0a 70%);
+    color:var(--ink);font-family:var(--sans);display:flex;justify-content:center;padding:24px 16px}
+  .stage{width:100%;max-width:500px}
+  h1{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 2px;font-weight:600}
+  .sub{font-size:12px;color:var(--muted);margin:0 0 16px;display:flex;align-items:center;gap:8px}
+  .tag{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:20px;background:#20301f;color:var(--success)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .cap{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:14px 0 10px}
+  .cap:first-child{margin-top:0}
+  /* creación */
+  input[type=text]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    font-family:var(--sans);font-size:15px;padding:10px 12px;outline:none}
+  input[type=text]:focus{border-color:var(--accent)}
+  .statrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .statrow .sname{flex:1;font-size:13.5px}
+  .statrow .sval{font-family:var(--mono);font-size:16px;width:26px;text-align:center;color:var(--accent)}
+  .step{width:32px;height:32px;padding:0;border-radius:8px;font-size:18px;line-height:1}
+  .rem{font-size:12px;color:var(--muted);margin-top:2px}.rem b{color:var(--accent);font-family:var(--mono)}
+  .derived{display:flex;gap:8px;margin-top:12px}
+  .dcard{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center}
+  .dcard .big{font-family:var(--mono);font-size:19px;font-weight:600;color:var(--ink)}
+  .dcard .lbl{font-size:10px;color:var(--muted);margin-top:2px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;transition:.15s}
+  .opt b{font-size:13px;font-weight:500}.opt small{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+  .opt small.req{color:var(--dim)}
+  .opt.sel{border-color:var(--accent);background:#2c2716}
+  .opt.locked{opacity:.45;cursor:default}
+  .opt:not(.locked):hover{border-color:var(--muted)}
+  .begin{width:100%;margin-top:16px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500;padding:12px}
+  /* combate */
+  .enemy{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;margin-bottom:12px}
+  .eflash{position:absolute;inset:0;opacity:0;border-radius:11px;pointer-events:none;background:var(--danger)}
+  .edmg{position:absolute;left:50%;top:2px;height:1px}
+  .sprite{color:var(--danger);display:inline-block;line-height:0}
+  .nm{font-weight:500;font-size:14px;margin-top:4px}.mt{font-size:10.5px;color:var(--muted)}
+  .bar{height:8px;background:var(--track);border-radius:5px;overflow:hidden;margin:8px 6px 3px}
+  .bar>div{height:100%;transition:width .45s cubic-bezier(.4,0,.2,1)}
+  .hpt{font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .mods{display:flex;gap:5px;justify-content:center;margin-top:6px;min-height:18px;flex-wrap:wrap}
+  .pill{font-size:10px;padding:1px 7px;border-radius:20px;font-family:var(--mono)}
+  .pill.stun{background:#2c2716;color:var(--warn)}.pill.dot{background:#3a1c18;color:var(--danger)}
+  .hero{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .hflash{position:absolute;inset:0;opacity:0;border-radius:11px;pointer-events:none;background:var(--danger)}
+  .hdmg{position:absolute;right:12px;top:2px;height:1px}
+  .rw{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+  .rw span{color:var(--muted);font-family:var(--mono)}
+  .log{background:#171410;border:1px solid var(--line);border-radius:12px;padding:10px 13px;min-height:104px;max-height:150px;overflow:auto;margin-bottom:12px}
+  .log p{font-family:var(--mono);font-size:11.5px;line-height:1.8;margin:0}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  button{font-family:var(--sans);font-size:14px;padding:9px 15px;border-radius:10px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);transition:.15s}
+  button:hover{background:var(--panel2)}button:active{transform:scale(.98)}
+  .primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+  button:disabled{opacity:.4;cursor:default}
+  .dmg{position:absolute;left:50%;top:0;font-family:var(--mono);font-size:18px;font-weight:600;color:#e8635a;text-shadow:0 1px 3px #000;transform:translate(-50%,0);opacity:1;pointer-events:none;white-space:nowrap}
+  .foot{font-size:11px;color:var(--dim);line-height:1.6;margin-top:12px}
+  @media (prefers-reduced-motion: no-preference){
+    .shake{animation:shk .4s ease}.dmg{animation:fl .9s ease-out forwards}.eflash.go,.hflash.go{animation:fla .5s ease-out}
+    @keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+    @keyframes fl{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}18%{opacity:1;transform:translate(-50%,0) scale(1.15)}100%{opacity:0;transform:translate(-50%,-40px) scale(1)}}
+    @keyframes fla{0%{opacity:0}25%{opacity:.3}100%{opacity:0}}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>Dungeon · motor real</h1>
+  <p class="sub">Corriendo el paquete <b>dungeon-engine</b> <span class="tag">motor bundleado</span></p>
+
+  <!-- ================= CREACIÓN ================= -->
+  <div class="panel" id="create">
+    <div class="cap">Nombre</div>
+    <input type="text" id="pname" placeholder="¿Cómo te llamas, aventurero?" maxlength="24" autocomplete="off">
+
+    <div class="cap">Reparte tus puntos <span style="text-transform:none;letter-spacing:0">(mín 1 · máx 10)</span></div>
+    <div id="stats"></div>
+    <div class="rem">Puntos restantes: <b id="remaining">0</b></div>
+    <div class="derived">
+      <div class="dcard"><div class="big" id="dhp">—</div><div class="lbl">vida máx</div></div>
+      <div class="dcard"><div class="big" id="den">—</div><div class="lbl">energía</div></div>
+      <div class="dcard"><div class="big" id="dre">—</div><div class="lbl">regen ⚡</div></div>
+    </div>
+
+    <div class="cap">Arma inicial</div>
+    <div class="opts" id="weapons"></div>
+
+    <button class="begin" id="begin">Entrar a la cripta</button>
+    <p class="foot">Los stats derivados salen en vivo de las fórmulas del motor. La espada pide fuerza y destreza 5 — si no las cumples, se bloquea, igual que en el engine original. Arrancas sin armadura: la protección es botín de la cripta.</p>
+  </div>
+
+  <!-- ================= COMBATE ================= -->
+  <div id="fight" style="display:none">
+    <div class="panel">
+      <div class="enemy" id="ecard">
+        <div class="eflash" id="eflash"></div><div class="edmg" id="edmg"></div>
+        <div class="sprite" id="esprite"><svg width="56" height="56" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21a12 12 0 0124 0v5a5 5 0 01-3 4.6V36a2 2 0 01-2 2H17a2 2 0 01-2-2v-5.4A5 5 0 0112 26z"/><circle cx="19" cy="23" r="2.6" fill="currentColor" stroke="none"/><circle cx="29" cy="23" r="2.6" fill="currentColor" stroke="none"/><path d="M24 27l-2.2 4h4.4z" fill="currentColor" stroke="none"/><path d="M20 34v3M24 34v3.5M28 34v3"/></svg></div>
+        <div class="nm">Esqueleto</div><div class="mt" id="emeta"></div>
+        <div class="bar"><div id="ehp" style="background:var(--hp)"></div></div>
+        <div class="hpt" id="ehpt"></div><div class="mods" id="emods"></div>
+      </div>
+      <div class="hero" id="hcard">
+        <div class="hflash" id="hflash"></div><div class="hdmg" id="hdmg"></div>
+        <div class="rw"><b style="font-weight:500" id="pname2">Héroe</b><span id="hhpt"></span></div>
+        <div class="bar"><div id="hhp" style="background:var(--php)"></div></div>
+        <div class="rw" style="margin-top:6px"><span style="font-size:11px">energía</span><span id="het"></span></div>
+        <div class="bar" style="height:6px"><div id="hen" style="background:var(--energy)"></div></div>
+        <div class="mods" id="hmods"></div>
+      </div>
+      <div class="log" id="log"></div>
+      <div class="actions">
+        <button class="primary" id="attack">Atacar (2⚡)</button>
+        <button id="wait">Esperar (regenera ⚡)</button>
+        <button id="reset">Reiniciar</button>
+        <button id="newchar">Nuevo personaje</button>
+      </div>
+    </div>
+    <p class="foot">Cada golpe llama a <code>resolveSmash()</code> del paquete con TU personaje. Nota: por ahora la única habilidad portada es smash, así que toda arma usa esa mecánica (con sus propios dados) hasta portar las 22.</p>
+  </div>
+</div>
+<script>/*__BUNDLE__*/</script>
+</body>
+</html>
