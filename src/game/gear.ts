@@ -41,8 +41,8 @@ export const SHOP_ARMOR: GearItem[] = [
 
 // --- Armaduras de pecho (forja) ---
 export const FORGE_ARMOR: GearItem[] = [
-  { id: "chainmail", name: "Cota de malla",    slot: "chest", defense: 6, tag: "heavy armor", req: { strength: 6 }, note: "pesada: resiste sangrado/dolor, torpe", price: 150 },
-  { id: "plate",     name: "Coraza de placas", slot: "chest", defense: 9, tag: "heavy armor", req: { strength: 7 }, note: "la mejor defensa", price: 260 },
+  { id: "chainmail", name: "Cota de malla",    slot: "chest", defense: 6, tag: "heavy armor", req: { strength: 8 }, note: "pesada: resiste sangrado/dolor, torpe", price: 150 },
+  { id: "plate",     name: "Coraza de placas", slot: "chest", defense: 9, tag: "heavy armor", req: { strength: 10 }, note: "la mejor defensa", price: 260 },
 ];
 
 export const ALL_GEAR: GearItem[] = [...SHIELDS, ...SHOP_ARMOR, ...FORGE_ARMOR];

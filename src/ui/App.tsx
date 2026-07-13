@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { type Creature, type Characteristics, recomputeDerived } from "../engine";
-import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState } from "../store";
+import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState, type AuthInfo } from "../store";
 import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, type WeaponOpt } from "../game/catalog";
 import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
 import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
+import { AccountBar } from "./AccountBar";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
 import { StatusBar } from "./StatusBar";
@@ -49,29 +50,58 @@ export function App() {
     (Object.values(eq).filter(Boolean) as string[]).map((id) => g.find((x) => x.id === id)).filter(Boolean) as GearItem[];
   const derive = (c: Creature, g = gearRef.current, eq = equippedRef.current): Creature => applyGear(c, itemsOf(g, eq));
 
+  const num = (v: unknown, d: number) => (Number.isFinite(v as number) ? (v as number) : d);
+  function hydrate(g: Awaited<ReturnType<typeof store.load>>) {
+    if (g?.player) {
+      // migración: armadura vieja (armor) -> gear.chest
+      let gr = g.gear ?? [];
+      let eq: Equipped = g.equipped ?? {};
+      const oldArmor = (g as { armor?: { id: string } | null }).armor;
+      if ((!g.gear || g.gear.length === 0) && oldArmor) {
+        const gi = gearById(oldArmor.id);
+        if (gi) { gr = [gi]; eq = { chest: gi.id }; }
+      }
+      gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq);
+      setPlayer(derive(g.player, gr, eq));
+      setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));
+      setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
+      materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
+      setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
+      const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
+      setScreen(savedRun ? "dungeon" : "hub");
+    } else setScreen("create");
+  }
+  const loadFromStore = () => { store.load().then(hydrate); };
+
+  useEffect(() => { loadFromStore(); }, []);
+
+  // Sesión de Firebase (login con Google). Solo activo cuando Firebase está conectado.
+  const [auth, setAuth] = useState<AuthInfo | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMsg, setAuthMsg] = useState<string | null>(null);
   useEffect(() => {
-    const num = (v: unknown, d: number) => (Number.isFinite(v as number) ? (v as number) : d);
-    store.load().then((g) => {
-      if (g?.player) {
-        // migración: armadura vieja (armor) -> gear.chest
-        let gr = g.gear ?? [];
-        let eq: Equipped = g.equipped ?? {};
-        const oldArmor = (g as { armor?: { id: string } | null }).armor;
-        if ((!g.gear || g.gear.length === 0) && oldArmor) {
-          const gi = gearById(oldArmor.id);
-          if (gi) { gr = [gi]; eq = { chest: gi.id }; }
-        }
-        gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq);
-        setPlayer(derive(g.player, gr, eq));
-        setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));
-        setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
-        materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
-        setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
-        const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
-        setScreen(savedRun ? "dungeon" : "hub");
-      } else setScreen("create");
-    });
+    if (!firebaseConfigured) return;
+    return (store as FirebaseStore).onAuth(setAuth);
   }, []);
+
+  async function linkGoogle() {
+    if (!firebaseConfigured) return;
+    setAuthBusy(true); setAuthMsg(null);
+    try {
+      const res = await (store as FirebaseStore).linkGoogle();
+      if (res.switched) { loadFromStore(); setAuthMsg(`Partida de ${res.email ?? "Google"} cargada.`); }
+      else setAuthMsg(`Cuenta vinculada con ${res.email ?? "Google"}.`);
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? "";
+      if (!code.includes("popup-closed") && !code.includes("cancelled-popup")) setAuthMsg("No se pudo iniciar sesión con Google.");
+    } finally { setAuthBusy(false); }
+  }
+  async function signOutGoogle() {
+    if (!firebaseConfigured) return;
+    setAuthBusy(true); setAuthMsg(null);
+    try { await (store as FirebaseStore).signOutUser(); loadFromStore(); setAuthMsg("Sesión cerrada."); }
+    finally { setAuthBusy(false); }
+  }
 
   const persist = (p: Creature, g: number, pot: number, inv: WeaponOpt[], x: number, pts: number, carg: Cargado[]) =>
     store.save({
@@ -254,6 +284,9 @@ export function App() {
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
       {screen === "loading" && <p className="sub">Cargando…</p>}
+      {firebaseConfigured && (screen === "create" || screen === "hub") && (
+        <AccountBar auth={auth} busy={authBusy} msg={authMsg} onLink={linkGoogle} onSignOut={signOutGoogle} />
+      )}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
       {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
       {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}

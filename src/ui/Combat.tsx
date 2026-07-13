@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
 import {
-  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics,
+  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics, hitChanceTuned,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
 } from "../engine";
 import { POTION_HEAL_FRACTION, POTION_COST } from "../game/catalog";
@@ -227,14 +227,18 @@ export function Combat({ player, enemies, potions, onEnd }: {
               const eff = effectiveCharacteristics(s.player);
               const avgWr = avgDice(s.player.weapon.damage);
               const tgt = s.enemies[aliveTarget(s.target)] ?? s.enemies[0];
+              const estAcc = eff.intelligence * (2 * eff.dexterity + 1) + avgDice(s.player.weapon.accuracy);
+              const teff = tgt ? effectiveCharacteristics(tgt) : null;
+              const estEva = teff ? Math.max(0, teff.dexterity * 3.5 + (tgt.evasionBonus ?? 0)) : 0;
               return moves.map((ab) => {
-                const raw = tgt ? Math.round(ab.damage(eff, tgt, avgWr)) : 0;
+                const raw = tgt ? Math.round(ab.damage(eff, tgt, avgWr) * (ab.dmgMod ?? 1)) : 0;
                 const dealt = tgt ? mitigate(raw, tgt.defense ?? 0) : raw;
                 const effPct = ab.effect && tgt ? Math.round(ab.effect.chance(eff, tgt)) : 0;
+                const estHit = Math.round(Math.min(97, Math.max(5, hitChanceTuned(estAcc, estEva) + (ab.accMod ?? 0))));
                 return (
                   <button key={ab.id} className="primary move" disabled={!canAct || s.player.energy < ab.energyCost} title={ab.desc} onClick={() => useAbilityPlayer(ab)}>
                     <span className="mvtop">{ab.name} <span className="mvcost">{ab.energyCost}⚡</span></span>
-                    <span className="mvmeta">≈{dealt} daño{ab.effect ? ` · ${ab.effect.label} ${effPct}%` : ""}</span>
+                    <span className="mvmeta">{estHit}% · ≈{dealt}{ab.effect ? ` · ${ab.effect.label} ${effPct}%` : ""}</span>
                   </button>
                 );
               });

@@ -57,43 +57,45 @@ const bleedChance = (u: Characteristics, t: Creature) => {
 
 export interface AbilitySpec {
   id: string; name: string; desc: string; energyCost: number;
+  accMod?: number;   // ± al % de acierto (negativo = más difícil de atinar)
+  dmgMod?: number;   // multiplicador de daño (dial de balance, por defecto 1)
   damage: (u: Characteristics, target: Creature, weaponRoll: number) => number;
   effect?: { name: string; label: string; chance: (u: Characteristics, target: Creature) => number; make: (target: Creature) => Modifier };
 }
 
 export const ABILITIES: Record<string, AbilitySpec> = {
   smash: {
-    id: "smash", name: "Golpe", desc: "Contundente. Puede derribar.", energyCost: 2,
+    id: "smash", name: "Golpe", desc: "Contundente y fiable. Puede derribar.", energyCost: 2, accMod: 0,
     damage: (u, _t, wr) => clamp(wr * u.strength, u.strength / 2, Infinity),
     effect: { name: "knockdown", label: "aturdido", chance: (u, t) => knockChance(u, t), make: () => knockdown() },
   },
   bash: {
-    id: "bash", name: "Empujón", desc: "Poco daño, alto derribo.", energyCost: 2,
+    id: "bash", name: "Empujón", desc: "Poco daño pero fácil de acertar, alto derribo.", energyCost: 2, accMod: 6,
     damage: (u) => clamp(u.strength, u.strength / 2, Infinity),
     effect: { name: "knockdown", label: "aturdido", chance: (u, t) => knockChance(u, t), make: () => knockdown() },
   },
   crush: {
-    id: "crush", name: "Aplastar", desc: "Golpe pesado escalado por vitalidad.", energyCost: 3,
+    id: "crush", name: "Aplastar", desc: "Golpe pesado y lento; pega durísimo pero cuesta atinar.", energyCost: 3, accMod: -12,
     damage: (u, _t, wr) => clamp(wr * u.strength * vitMult(u), u.strength / 2, Infinity),
     effect: { name: "knockdown", label: "aturdido", chance: (u, t) => knockChance(u, t, vitMult(u)), make: () => knockdown() },
   },
   stab: {
-    id: "stab", name: "Estocada", desc: "Perfora. Puede causar dolor.", energyCost: 2,
+    id: "stab", name: "Estocada", desc: "Perfora con fuerza, pero difícil de atinar (pide destreza y fuerza). Puede causar dolor.", energyCost: 2, accMod: -16, dmgMod: 1.5,
     damage: (u, t, wr) => { const base = wr * u.strength; return clamp(base + (unarm(t) ? 1 : 0) * 0.05 * base, u.strength / 2, Infinity); },
     effect: { name: "pain", label: "dolor", chance: (u, t) => painChance(u, t), make: () => pain() },
   },
   quick_stab: {
-    id: "quick_stab", name: "Finta", desc: "Rápida y barata, poco daño.", energyCost: 1,
+    id: "quick_stab", name: "Finta", desc: "Rápida, barata y segura; poco daño.", energyCost: 1, accMod: 10,
     damage: (u, _t, wr) => clamp(wr * (u.strength / 2), u.strength / 2, Infinity),
     effect: { name: "pain", label: "dolor", chance: (u, t) => painChance(u, t), make: () => pain() },
   },
   cut: {
-    id: "cut", name: "Tajo", desc: "Corta. Puede causar sangrado.", energyCost: 2,
+    id: "cut", name: "Tajo", desc: "Corte amplio. Puede causar sangrado.", energyCost: 2, accMod: 0,
     damage: (u, t, wr) => { const base = wr * u.strength; return clamp(base + (unarm(t) ? 1 : 0) * 0.05 * base * 1.15, u.strength / 2, Infinity); },
     effect: { name: "bleeding", label: "sangrado", chance: (u, t) => bleedChance(u, t), make: (t) => bleeding(t) },
   },
   quick_cut: {
-    id: "quick_cut", name: "Sajadura", desc: "Corte rápido, poco daño.", energyCost: 1,
+    id: "quick_cut", name: "Sajadura", desc: "Corte rápido y seguro, poco daño.", energyCost: 1, accMod: 8,
     damage: (u, _t, wr) => clamp(wr * (u.strength / 2), u.strength / 2, Infinity),
     effect: { name: "bleeding", label: "sangrado", chance: (u, t) => bleedChance(u, t), make: (t) => bleeding(t) },
   },
@@ -109,11 +111,11 @@ export interface AbilityResolution {
 
 export function resolveAbility(ability: AbilitySpec, user: Creature, target: Creature, tune: TuneConfig = DEFAULT_TUNE, rng: RNG = Math.random): AbilityResolution {
   const acc = accuracyOf(user, rng), eva = evasionOf(target, rng);
-  const chance = Math.round(hitChanceTuned(acc, eva, tune));
+  const chance = clamp(Math.round(hitChanceTuned(acc, eva, tune)) + (ability.accMod ?? 0), 5, 97);
   if (!rollUnder(chance, rng)) return { ability: ability.id, hit: false, chance, damage: 0, weaponRoll: 0, modifiers: [] };
   const u = effectiveCharacteristics(user);
   const weaponRoll = diceroll(user.weapon.damage, rng);
-  const damage = Math.round(ability.damage(u, target, weaponRoll));
+  const damage = Math.round(ability.damage(u, target, weaponRoll) * (ability.dmgMod ?? 1));
   let modifiers: Modifier[] = [];
   let effect: AbilityResolution["effect"];
   if (ability.effect) {
