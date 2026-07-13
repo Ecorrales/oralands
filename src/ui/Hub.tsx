@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Creature } from "../engine";
 import { STAT_KEYS, STAT_ES, type WeaponOpt } from "../game/catalog";
 import type { GearItem } from "../game/gear";
-import { MATERIALS, matIcon, matName, type Mats } from "../game/materials";
+import { MATERIALS, matIcon, matName, matSource, type Mats } from "../game/materials";
 import type { Cargado } from "../game/cargados";
 import { InventoryInline } from "./InventoryInline";
 
@@ -52,7 +52,10 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
                 {ownedMats.map((m) => (
                   <div className="matcard" key={m.id}>
                     <span className="mi">{matIcon(m.id)}</span>
-                    <span className="mn">{matName(m.id)}</span>
+                    <div className="mninfo">
+                      <span className="mn">{matName(m.id)}</span>
+                      <span className="msrc">{matSource(m.id)}</span>
+                    </div>
                     <span className="mq">{materials[m.id]}</span>
                   </div>
                 ))}

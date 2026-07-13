@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { type Creature, type Characteristics, recomputeDerived } from "../engine";
 import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState } from "../store";
 import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, type WeaponOpt } from "../game/catalog";
-import { applyGear, gearById, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
-import { gainXp } from "../game/progression";
+import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
 import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
 import { Hub } from "./Hub";
@@ -161,6 +160,18 @@ export function App() {
     persist(player, ng, potions, inventory, xp, points, cargados);
   }
 
+  function sellGear(id: string) {
+    if (!player) return;
+    const g = gear.find((x) => x.id === id);
+    if (!g) return;
+    const gr = gear.filter((x) => x.id !== id);
+    const eq = { ...equipped };
+    if (eq[g.slot] === id) delete eq[g.slot];   // si estaba puesto, se quita
+    const ng = gold + gearSellValue(g);
+    gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq); setGold(ng);
+    const next = derive(player, gr, eq); setPlayer(next); persist(next, ng, potions, inventory, xp, points, cargados);
+  }
+
   function sellMaterial(id: string, qty: number) {
     if (!player) return;
     const have = materials[id] ?? 0;
@@ -216,8 +227,8 @@ export function App() {
   async function handleRunEnd(r: RunResult) {
     const banked = r.outcome === "won" ? r.runGold : 0;
     const newGold = gold + banked;
+    // el nivel ya se subió en vivo durante la bajada: aquí solo guardamos el resultado
     const raised: Creature = { ...r.player, modifiers: [] };
-    const res = gainXp(raised, xp, r.points, r.runXp);
     raised.hp = raised.maxHp; raised.energy = raised.maxEnergy;
     const next = derive(raised);
     runRef.current = null; setRun(null);
@@ -226,9 +237,9 @@ export function App() {
     const inv = [...r.inventory, ...r.recoveredWeapons];
     let carg = cargados.filter((c) => !r.defeatedCargados.includes(c.id));
     if (r.newCargado) { if (carg.length >= MAX_CARGADOS) carg = carg.slice(1); carg = [...carg, r.newCargado]; }
-    setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(res.xp); setPoints(res.points); setCargados(carg);
-    await persist(next, newGold, r.potions, inv, res.xp, res.points, carg);
-    if (res.leveled.length) setLevelMsg(`¡Subiste a nivel ${res.leveled[res.leveled.length - 1]}! +${res.leveled.length * 2} puntos.`);
+    setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
+    await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
+    if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
     if (r.newCargado) setCargadoMsg(`☠ ${r.newCargado.creature.name} se llevó tu botín y ahora te acecha como némesis.`);
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
     setScreen("hub");
@@ -237,7 +248,7 @@ export function App() {
   return (
     <div className="stage">
       {(screen === "loading" || screen === "create") && <h1 className="title">Dungeon</h1>}
-      {player && screen !== "loading" && screen !== "create" && (
+      {player && screen === "hub" && (
         <StatusBar level={player.level} xp={xp} points={points} onOpenStats={() => setShowStats(true)} />
       )}
       {levelMsg && screen === "hub" && <div className="lvlmsg" onClick={() => setLevelMsg(null)}>{levelMsg} <span className="soft">(toca para cerrar)</span></div>}
@@ -246,11 +257,11 @@ export function App() {
       {screen === "loading" && <p className="sub">Cargando…</p>}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
       {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
-      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
+      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
-      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
+      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
       {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}
     </div>
   );

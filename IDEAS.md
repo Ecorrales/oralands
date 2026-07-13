@@ -74,3 +74,12 @@ Opciones cuando decida:
 - A) 50% plano para todos: simple y claro, pierde el matiz temático (bestias=materiales).
 - B) Por tipo menos extremo: esqueleto ~60%, bestias/ratas ~35-40% — mantiene "no-muertos dan más oro" sin castigar tanto las criptas de bestias.
 Dial: goldDropChance en loot.ts.
+
+## Historias y quests narrativas (VISIÓN)
+Idea de Nox: escribir historias para generar quests, y que las misiones NO sean solo bajar lineal, sino objetivos como "ir a buscar algo o alguien". 
+- Sistema de quests con objetivos variados: buscar un objeto, encontrar/rescatar un PNJ, cazar un objetivo específico, escoltar, entregar, etc.
+- Conecta con el tablón de misiones del pueblo (ver visión del Pueblo) y con los avisos de Overlord.
+- Las historias dan contexto/lore a las criptas: por qué bajas, qué buscas, quién te lo pide.
+- Encaja fuerte con las criptas navegables (buscar "algo o alguien" implica explorar un mapa, no solo avanzar salas).
+- Posible generación: plantillas de quest + relleno procedural (objetivo, lugar, recompensa) o quests escritas a mano para momentos clave.
+- Es el pegamento narrativo que convierte "matar salas" en "tengo una razón para bajar".

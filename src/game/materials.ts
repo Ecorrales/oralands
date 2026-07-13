@@ -23,6 +23,18 @@ const MAT_PRICE: Record<string, number> = {
 };
 export const matSell = (id: string): number => MAT_PRICE[id] ?? 1;
 
+// De dónde sale cada material (por ahora solo la Cripta; luego habrá más calabozos).
+const MAT_SOURCE: Record<string, string> = {
+  wood: "escombros de batalla",
+  steel: "escombros de batalla",
+  stone: "escombros de batalla",
+  bone: "no-muertos (esqueletos)",
+  fang: "bestias (lobos)",
+  claw: "bestias y alimañas",
+  hide: "alimañas y bestias (ratas, lobos)",
+};
+export const matSource = (id: string): string => MAT_SOURCE[id] ?? "";
+
 export type Mats = Record<string, number>;
 export function mergeMats(into: Mats, add: Mats): Mats {
   const out = { ...into };

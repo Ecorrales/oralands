@@ -48,6 +48,7 @@ export const FORGE_ARMOR: GearItem[] = [
 export const ALL_GEAR: GearItem[] = [...SHIELDS, ...SHOP_ARMOR, ...FORGE_ARMOR];
 const byId = new Map(ALL_GEAR.map((g) => [g.id, g]));
 export const gearById = (id: string): GearItem | undefined => byId.get(id);
+export const gearSellValue = (g: GearItem): number => Math.max(1, Math.floor(g.price * 0.5));
 
 export interface GearDerived {
   defense: number; evasionBonus: number; grantedAbilities: string[];

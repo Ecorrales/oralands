@@ -1,5 +1,14 @@
 import type { Creature } from "../engine";
+import { effectiveCharacteristics } from "../engine";
 import { SLOT_ES, SLOT_ROWS, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
+
+// promedio de un dado "NdM" = N*(M+1)/2
+const avgDice = (spec: string): number => {
+  const m = /^(\d+)d(\d+)$/.exec(spec.trim());
+  if (!m) return 0;
+  const n = +m[1], f = +m[2];
+  return n * (f + 1) / 2;
+};
 
 export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose }: {
   player: Creature; gear: GearItem[]; equipped: Partial<Record<EquipSlot, string>>;
@@ -9,6 +18,13 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
     const id = equipped[slot]; return id ? gear.find((g) => g.id === id) ?? null : null;
   };
   const ownedFor = (slot: EquipSlot) => gear.filter((g) => g.slot === slot);
+
+  // Ofensiva del arma equipada + características efectivas (incluye penalizaciones de equipo).
+  const eff = effectiveCharacteristics(player);
+  const dmgDice = /^(\d+)d(\d+)$/.exec(player.weapon.damage.trim());
+  const dmgMin = dmgDice ? Math.round(Math.max(+dmgDice[1] * eff.strength, eff.strength / 2)) : 0;
+  const dmgMax = dmgDice ? Math.round(+dmgDice[1] * +dmgDice[2] * eff.strength) : 0;
+  const accEst = Math.round(2 * eff.intelligence * ((2 * eff.dexterity) + 1) / 2 + avgDice(player.weapon.accuracy));
 
   // celda de la tabla de equipo
   const cell = (slot: EquipSlot) => {
@@ -40,7 +56,9 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
     <div className="overlay" onClick={onClose}>
       <div className="statspanel wide" onClick={(e) => e.stopPropagation()}>
         <div className="cap">Equipo · {player.name}</div>
+        <div className="eqsummary">Daño <b>{dmgMin}–{dmgMax}</b> · Precisión ≈ <b>{accEst}</b></div>
         <div className="eqsummary">Defensa <b>{player.defense ?? 0}</b> · Evasión <b>{(player.evasionBonus ?? 0) >= 0 ? "+" : ""}{player.evasionBonus ?? 0}</b></div>
+        <div className="eqhelp">Rango de un golpe base (arma × fuerza). El daño real varía por habilidad, dados y la defensa del enemigo.</div>
 
         <div className="eqgrid">
           {SLOT_ROWS.map((row, i) => (

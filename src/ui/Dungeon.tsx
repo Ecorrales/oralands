@@ -2,9 +2,9 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
-import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, type Mats } from "../game/materials";
+import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
-import { xpForEnemy } from "../game/progression";
+import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
 import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, biomeOf, searchOutcome, searchIntro } from "../game/search";
@@ -19,15 +19,15 @@ const STALKER_CHANCE = 0.4;  // prob. por sala de toparte al cargado que acecha
 
 export interface RunResult {
   player: Creature; outcome: "won" | "dead"; runGold: number; potions: number;
-  inventory: WeaponOpt[]; runXp: number; points: number;
+  inventory: WeaponOpt[]; xp: number; points: number;
   newCargado: Cargado | null; defeatedCargados: string[]; recoveredWeapons: WeaponOpt[];
   materials: Mats;
 }
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
 
-export function Dungeon({ player, potions, inventory, points, cargados, resume, onCheckpoint, onExit }: {
-  player: Creature; potions: number; inventory: WeaponOpt[]; points: number; cargados: Cargado[];
+export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, onCheckpoint, onExit }: {
+  player: Creature; potions: number; inventory: WeaponOpt[]; xp: number; points: number; cargados: Cargado[];
   resume: RunState | null; onCheckpoint: (rs: RunState) => void;
   onExit: (r: RunResult) => void;
 }) {
@@ -42,6 +42,8 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
   const [runGold, setRunGold] = useState(resume?.runGold ?? 0);
   const [roomGold, setRoomGold] = useState(resume?.roomGold ?? 0);
+  const [roomXp, setRoomXp] = useState(0);
+  const [roomMats, setRoomMats] = useState<Mats>({});
   const [drop, setDrop] = useState<WeaponOpt | null>(resume?.drop ?? null);
   const [picked, setPicked] = useState(resume?.picked ?? false);
   const [equipped, setEquipped] = useState(resume?.equipped ?? false);
@@ -51,11 +53,12 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   const [searched, setSearched] = useState(resume?.searched ?? false);
   const [searching, setSearching] = useState(false);
   const [searchText, setSearchText] = useState<string | null>(null);
+  const [levelUp, setLevelUp] = useState<string | null>(null);
 
   const working = useRef<Creature>(resume ? { ...resume.player, modifiers: [] } : { ...player, hp: player.maxHp, energy: player.maxEnergy, modifiers: [] });
   const potionsRef = useRef(resume?.potions ?? potions);
   const invRef = useRef<WeaponOpt[]>([...(resume?.inventory ?? inventory)]);
-  const runXp = useRef(resume?.runXp ?? 0);
+  const xpRef = useRef(resume ? resume.runXp : xp);
   const runGoldRef = useRef(resume?.runGold ?? 0);
   const pointsRef = useRef(resume?.points ?? points);
   const campStart = useRef(resume?.campStartMs ?? 0);
@@ -83,7 +86,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     return {
       stage, stageRooms, roomInStage, depth: depth.current,
       player: working.current, potions: potionsRef.current, inventory: invRef.current,
-      runGold: runGoldRef.current, runXp: runXp.current, points: pointsRef.current,
+      runGold: runGoldRef.current, runXp: xpRef.current, points: pointsRef.current,
       phase: "camp", drop, picked, equipped, roomGold, searched,
       resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
       stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
@@ -118,15 +121,23 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     const id = setInterval(() => {
       const elapsed = (Date.now() - searchStart.current) / 1000;
       if (searchAmbushAt.current != null && elapsed >= searchAmbushAt.current) {
-        searchAmbushAt.current = null; setSearching(false); ambushReturn.current = "cleared";
+        searchAmbushAt.current = null; setSearching(false); setSearched(true);
+        setSearchText("Te emboscaron mientras rebuscabas — no alcanzaste a hallar nada.");
+        ambushReturn.current = "cleared";
         setAmbushGroup(makeDungeonGroup(depth.current, stage)); setPhase("ambush");
         return;
       }
       searchProgress.current = Math.min(1, elapsed / SEARCH_SEC);
       if (elapsed >= SEARCH_SEC) {
         setSearching(false); setSearched(true);
-        if (searchFound.current) { runGoldRef.current += searchGoldAmt.current; setRunGold(runGoldRef.current); }
-        setSearchText(searchOutcome(biomeOf(group), searchFound.current) + (searchFound.current ? ` (+◈${searchGoldAmt.current})` : ""));
+        let extra = "";
+        if (searchFound.current) {
+          runGoldRef.current += searchGoldAmt.current; setRunGold(runGoldRef.current);
+          const mats = rollSearchMaterials(enemyKind(group[0] ?? working.current), depth.current);
+          runMats.current = mergeMats(runMats.current, mats);
+          extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
+        }
+        setSearchText(searchOutcome(biomeOf(group), searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
       force();
@@ -144,13 +155,21 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   }
 
   function awardKill(enemies: Creature[]) {
-    let g = 0;
+    let g = 0, xpGain = 0;
     for (const e of enemies) {
-      runXp.current += xpForEnemy(depth.current);
+      xpGain += xpForEnemy(depth.current);
       if (Math.random() < goldDropChance(enemyKind(e))) g += goldForEnemy(depth.current);
     }
     runGoldRef.current += g; setRoomGold(g); setRunGold(runGoldRef.current);
     noGoldLine.current = g > 0 ? "" : rollNoGoldLine();
+    setRoomXp(xpGain);
+    // subir de nivel EN VIVO: la XP de la sala se convierte en niveles + puntos al instante
+    const res = gainXp(working.current, xpRef.current, pointsRef.current, xpGain);
+    xpRef.current = res.xp; pointsRef.current = res.points;
+    if (res.leveled.length) {
+      const to = res.leveled[res.leveled.length - 1];
+      setLevelUp(`¡Nivel ${to}! +${res.leveled.length * POINTS_PER_LEVEL} puntos — repártelos en el campamento.`);
+    }
   }
   function onDeath(killers: Creature[], cargadoFight: boolean) {
     if (!cargadoFight) {
@@ -174,7 +193,9 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
     else awardKill(group);
     const kind = enemyKind(group[0] ?? working.current);
-    runMats.current = mergeMats(runMats.current, rollRoomMaterials(kind, depth.current));
+    const mats = rollRoomMaterials(kind, depth.current);
+    runMats.current = mergeMats(runMats.current, mats);
+    setRoomMats(mats);
     const d = rollWeaponDrop(depth.current);
     setDrop(d); setPicked(false); setEquipped(false);
     setSearched(false); setSearching(false); setSearchText(null); searchProgress.current = 0;
@@ -232,7 +253,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   function finish() {
     onExit({
       player: wp, outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
-      runXp: runXp.current, points: pointsRef.current,
+      xp: xpRef.current, points: pointsRef.current,
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
       materials: runMats.current,
     });
@@ -247,8 +268,11 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     <div>
       <div className="crawlbar">
         <span>Cripta · etapa {stage} · sala {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
-        <span className="goldmini">◈ {runGold} <span className="soft">sin asegurar</span> · ⚗ {potionsRef.current}</span>
+        <span className="goldmini">Nv {wp.level} · ◈ {runGold} <span className="soft">sin asegurar</span> · ⚗ {potionsRef.current}</span>
       </div>
+      {levelUp && phase !== "result" && (
+        <div className="levelbanner" onClick={() => setLevelUp(null)}>⬆ {levelUp} <span className="soft">(toca para cerrar)</span></div>
+      )}
       {stalkerPending && phase !== "result" && (
         <div className="stalkerbanner">☠ Un némesis acecha esta cripta{stalker.current ? `: ${stalker.current.creature.name}` : ""}.</div>
       )}
@@ -277,9 +301,21 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
           <div className="cap">Sala despejada</div>
           <div className="loot">
             <div className="lootgold">{roomGold > 0 ? `◈ +${roomGold} oro` : <span className="nogold">{noGoldLine.current || "Sin oro esta vez."}</span>}</div>
+
+            <div className="rewardrow">
+              {roomXp > 0 && <span className="rewardxp">+{roomXp} XP</span>}
+              {Object.keys(roomMats).length > 0 && (
+                <div className="rewardmats">
+                  {Object.entries(roomMats).map(([id, n]) => (
+                    <span className="rewardmat" key={id}>{matIcon(id)} {matName(id)} <b>×{n}</b></span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {drop ? (
               <div className={"dropcard" + (picked ? " done" : "")}>
-                <div className="dropinfo"><b>{drop.name}</b><small>daño {drop.damage} · {moveText(drop.abilities)}</small></div>
+                <div className="dropinfo"><b>{drop.name}</b><small>daño {drop.damage} · {drop.twoHanded ? "dos manos" : "una mano"} · {moveText(drop.abilities)}</small></div>
                 {picked ? <span className="equipped">{equipped ? "equipada ✓" : "en mochila ✓"}</span> : (
                   <div className="dropbtns">
                     {dropOk && <button className="small" onClick={() => equipDrop(drop)}>Equipar</button>}

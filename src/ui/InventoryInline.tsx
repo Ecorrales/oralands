@@ -20,7 +20,7 @@ export function InventoryInline({ player, inventory, onEquip }: {
           <div key={w.id} className={"invitem" + (equipped ? " eq" : "")}>
             <div className="invinfo">
               <b>{w.name}{qty > 1 && <span className="qty">×{qty}</span>}{equipped && <span className="eqtag"> equipada</span>}</b>
-              <small>daño {w.damage} · {moveText(w.abilities)}</small>
+              <small>daño {w.damage} · {w.twoHanded ? "dos manos" : "una mano"} · {moveText(w.abilities)}</small>
               {!ok && <small className="reqline">requiere {reqTxt}</small>}
             </div>
             {equipped ? <span className="eqmark">✓</span>

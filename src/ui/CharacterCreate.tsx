@@ -76,7 +76,7 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
             <button key={w.id} disabled={!ok}
               className={"opt" + (sel ? " sel" : "") + (ok ? "" : " locked")}
               onClick={() => setWeaponId(w.id)}>
-              <b>{w.name}</b>
+              <b>{w.name}<span className="soft"> · {w.twoHanded ? "2 manos" : "1 mano"}</span></b>
               <small>{w.abilities.map((id) => { const a = getAbility(id); return a ? `${a.name} ${a.energyCost}⚡` : id; }).join(" · ")}</small>
               <small className="req">{ok ? w.note : "req: " + reqTxt}</small>
             </button>
