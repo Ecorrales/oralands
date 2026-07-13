@@ -68,7 +68,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     setTimeout(() => { if (who === "player") { s.shakePlayer = false; s.flashPlayer = false; } else { s.shake[who] = false; s.flash[who] = false; } force(); }, 450);
   };
   const consumeSkip = (c: Creature): boolean => { const i = c.modifiers.findIndex((m) => m.kind === "skip"); if (i >= 0) { c.modifiers.splice(i, 1); return true; } return false; };
-  const ageMods = (c: Creature) => { c.modifiers.forEach((m) => m.duration--); c.modifiers = c.modifiers.filter((m) => m.duration > 0); };
+  const ageMods = (c: Creature) => { if (!Array.isArray(c.modifiers)) c.modifiers = []; c.modifiers.forEach((m) => m.duration--); c.modifiers = c.modifiers.filter((m) => m.duration > 0); };
   const tickDots = (c: Creature, who: Who) => {
     for (const m of c.modifiers) {
       if (m.kind !== "dot") continue;
@@ -109,18 +109,30 @@ export function Combat({ player, enemies, potions, onEnd }: {
   }
   function endTurn() { const s = b.current; if (s.phase !== "player") return; ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 400); }
 
+  /** Red de seguridad: si el turno enemigo lanza un error, no dejamos el combate
+   *  congelado en "busy" — devolvemos el control al jugador y lo registramos. */
+  function recoverToPlayer(where: string, e: unknown) {
+    console.error(`combate (${where}):`, e);
+    const s = b.current;
+    if (!Array.isArray(s.player.modifiers)) s.player.modifiers = [];
+    if (s.phase !== "over") s.phase = "player";
+    force();
+  }
   function enemyTurn() {
-    const s = b.current; s.phase = "enemy";
-    s.groupEnergy = Math.min(s.groupMaxEnergy, s.groupEnergy + s.groupRegen);
-    s.enemies.forEach((e, i) => { if (!isDead(e)) tickDots(e, i); });
-    if (allDead()) { force(); return endGame(true); }
-    if (isDead(s.player)) { force(); return endGame(false); }
-    s.skip = new Set();
-    s.enemies.forEach((e, i) => { if (!isDead(e) && consumeSkip(e)) { s.skip.add(i); pushLog(`${e.name} aturdido, pierde su acción.`, "var(--warn)"); } });
-    s.turnPtr = 0; s.guard = 0;
-    force(); setTimeout(stepGroup, 500);
+    try {
+      const s = b.current; s.phase = "enemy";
+      s.groupEnergy = Math.min(s.groupMaxEnergy, s.groupEnergy + s.groupRegen);
+      s.enemies.forEach((e, i) => { if (!isDead(e)) tickDots(e, i); });
+      if (allDead()) { force(); return endGame(true); }
+      if (isDead(s.player)) { force(); return endGame(false); }
+      s.skip = new Set();
+      s.enemies.forEach((e, i) => { if (!isDead(e) && consumeSkip(e)) { s.skip.add(i); pushLog(`${e.name} aturdido, pierde su acción.`, "var(--warn)"); } });
+      s.turnPtr = 0; s.guard = 0;
+      force(); setTimeout(stepGroup, 500);
+    } catch (e) { recoverToPlayer("enemyTurn", e); }
   }
   function stepGroup() {
+   try {
     const s = b.current;
     if (isDead(s.player)) { force(); return endGame(false); }
     if (allDead()) { force(); return endGame(true); }
@@ -147,6 +159,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! sobre ${s.player.name}.`, "var(--warn)"); }
     if (isDead(s.player)) { force(); return endGame(false); }
     force(); setTimeout(stepGroup, 700);
+   } catch (e) { recoverToPlayer("stepGroup", e); }
   }
   function groupDone() { const s = b.current; s.enemies.forEach((e) => { if (!isDead(e)) ageMods(e); }); endEnemy(); }
   function endEnemy() { if (isDead(b.current.player)) return endGame(false); startPlayerTurn(); }
@@ -157,6 +170,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     return ability || potion;
   }
   function startPlayerTurn() {
+   try {
     const s = b.current;
     regenEnergy(s.player);
     tickDots(s.player, "player");
@@ -168,6 +182,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
       ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900); return;
     }
     s.phase = "player"; force();
+   } catch (e) { recoverToPlayer("startPlayerTurn", e); }
   }
   function endGame(win: boolean) { b.current.phase = "over"; pushLog(win ? "¡Grupo derrotado!" : `${b.current.player.name} cae…`, win ? "var(--success)" : "var(--danger)"); force(); }
 

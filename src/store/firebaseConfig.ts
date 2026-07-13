@@ -11,4 +11,5 @@ export const firebaseConfig = {
   appId: "1:764014772835:web:03639ad797884d9668ee56"
 };
 
+
 export const firebaseConfigured = !firebaseConfig.apiKey.startsWith("TU_");

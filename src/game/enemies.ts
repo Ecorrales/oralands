@@ -63,7 +63,8 @@ export function makeDungeonGroup(depth: number, stage: number, kinds?: EnemyKind
 
 /** Etiqueta corta de familia para UI. */
 export function enemyKind(c: Creature): "undead" | "rodent" | "beast" {
-  if (c.tags.includes("undead")) return "undead";
-  if (c.tags.includes("rodent")) return "rodent";
+  const tags = c.tags ?? [];
+  if (tags.includes("undead")) return "undead";
+  if (tags.includes("rodent")) return "rodent";
   return "beast";
 }

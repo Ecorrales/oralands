@@ -35,7 +35,7 @@ export function makeCreature(name: string, characteristics: Characteristics, lev
   return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(characteristics.strength, level) };
 }
 
-export const hasTag = (c: Creature, tag: string): boolean => c.tags.includes(tag);
+export const hasTag = (c: Creature, tag: string): boolean => (c.tags ?? []).includes(tag);
 
 /** Recalcula stats derivados tras cambiar nivel o características. */
 export function recomputeDerived(c: Creature): void {

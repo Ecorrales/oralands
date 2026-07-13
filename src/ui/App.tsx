@@ -51,8 +51,21 @@ export function App() {
   const derive = (c: Creature, g = gearRef.current, eq = equippedRef.current): Creature => applyGear(c, itemsOf(g, eq));
 
   const num = (v: unknown, d: number) => (Number.isFinite(v as number) ? (v as number) : d);
+  // Firebase RTDB borra arreglos vacíos al guardar; al cargar vuelven como undefined.
+  // Reponemos los arreglos críticos de cada creatura para no reventar el combate.
+  const fixCreature = <C,>(c: C): C => {
+    if (c && typeof c === "object") {
+      const cc = c as unknown as { modifiers?: unknown; tags?: unknown; weapon?: { abilities?: unknown } };
+      if (!Array.isArray(cc.modifiers)) cc.modifiers = [];
+      if (!Array.isArray(cc.tags)) cc.tags = [];
+      if (cc.weapon && !Array.isArray(cc.weapon.abilities)) cc.weapon.abilities = [];
+    }
+    return c;
+  };
   function hydrate(g: Awaited<ReturnType<typeof store.load>>) {
     if (g?.player) {
+      fixCreature(g.player);
+      if (g.run?.player) fixCreature(g.run.player);
       // migración: armadura vieja (armor) -> gear.chest
       let gr = g.gear ?? [];
       let eq: Equipped = g.equipped ?? {};
