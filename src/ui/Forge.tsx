@@ -25,8 +25,8 @@ export function Forge({ player, gold, inventory, onForge, onClose }: {
         <div className="shopbody">
           {RECIPES.map((r) => {
             const chk = canForge(r, gold, inventory, player.characteristics);
-            const out = r.kind === "weapon" ? r.weapon! : r.armor!;
-            const reqObj = r.kind === "weapon" ? r.weapon!.req : r.armor!.req;
+            const out = r.kind === "weapon" ? r.weapon! : r.gear!;
+            const reqObj = r.kind === "weapon" ? r.weapon!.req : r.gear!.req;
             const reqOk = chk.req;
             return (
               <div className="forgeitem" key={r.id}>
@@ -35,7 +35,7 @@ export function Forge({ player, gold, inventory, onForge, onClose }: {
                     <b>{out.name}</b>
                     {r.kind === "weapon"
                       ? <small>daño {r.weapon!.damage} · {moveText(r.weapon!.abilities)}</small>
-                      : <small>armadura pesada · {r.armor!.note}</small>}
+                      : <small>defensa +{r.gear!.defense} · {r.gear!.note}</small>}
                     {!reqOk && <small className="reqline">requiere {reqText(reqObj, player.characteristics)}</small>}
                   </div>
                   <button className="small" disabled={!chk.ok} onClick={() => onForge(r)}>Forjar</button>

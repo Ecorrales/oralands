@@ -2,22 +2,41 @@ import { useState } from "react";
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
 import {
-  SHOP_WEAPONS, SHOP_ARMORS, POTION_PRICE, sellValue, groupWeapons, reqMet, STAT_ES,
-  type WeaponOpt, type ArmorOpt,
+  SHOP_WEAPONS, POTION_PRICE, sellValue, groupWeapons, reqMet, STAT_ES,
+  type WeaponOpt,
 } from "../game/catalog";
+import { SHIELDS, SHOP_ARMOR, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
 
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
   Object.entries(req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
 
-export function Shop({ player, gold, potions, inventory, armor, onBuyPotion, onBuyWeapon, onBuyArmor, onSell, onSellAll, onClose }: {
-  player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; armor: ArmorOpt | null;
-  onBuyPotion: () => void; onBuyWeapon: (w: WeaponOpt) => void; onBuyArmor: (a: ArmorOpt) => void;
+export function Shop({ player, gold, potions, inventory, equipped, onBuyPotion, onBuyWeapon, onBuyGear, onSell, onSellAll, onClose }: {
+  player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equipped: Partial<Record<EquipSlot, string>>;
+  onBuyPotion: () => void; onBuyWeapon: (w: WeaponOpt) => void; onBuyGear: (g: GearItem) => void;
   onSell: (id: string) => void; onSellAll: () => void; onClose: () => void;
 }) {
   const [tab, setTab] = useState<"buy" | "sell">("buy");
   const groups = groupWeapons(inventory);
   const dupEarn = (() => { const seen = new Set<string>(); let sum = 0; for (const w of inventory) { if (seen.has(w.id)) sum += sellValue(w); else seen.add(w.id); } return sum; })();
+
+  const gearRow = (g: GearItem) => {
+    const ok = reqMetGear(g, player.characteristics);
+    const on = equipped[g.slot] === g.id;
+    const twoHandBlock = g.slot === "offhand" && player.weapon.twoHanded;
+    return (
+      <div className={"shopitem" + (on ? " eq" : "")} key={g.id}>
+        <div className="invinfo">
+          <b>{g.name}{on && <span className="eqtag"> puesto</span>}</b>
+          <small>defensa +{g.defense ?? 0}{g.evasion ? ` · evasión ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""}{g.abilities ? ` · da ${moveText(g.abilities)}` : ""}</small>
+          {!ok && <small className="reqline">requiere {reqText(g.req, player.characteristics)}</small>}
+          {twoHandBlock && <small className="reqline">tienes un arma a dos manos</small>}
+        </div>
+        {on ? <span className="eqmark">✓</span>
+          : <button className="small" disabled={gold < g.price || !ok || twoHandBlock} onClick={() => onBuyGear(g)}>◈ {g.price}</button>}
+      </div>
+    );
+  };
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -46,7 +65,7 @@ export function Shop({ player, gold, potions, inventory, armor, onBuyPotion, onB
                 return (
                   <div className="shopitem" key={w.id}>
                     <div className="invinfo">
-                      <b>{w.name}</b>
+                      <b>{w.name}{w.twoHanded && <span className="soft"> · 2 manos</span>}</b>
                       <small>daño {w.damage} · {moveText(w.abilities)}</small>
                       {!ok && <small className="reqline">requiere {reqText(w.req, player.characteristics)}</small>}
                     </div>
@@ -55,23 +74,12 @@ export function Shop({ player, gold, potions, inventory, armor, onBuyPotion, onB
                 );
               })}
 
-              <div className="baghead">Armaduras</div>
-              {SHOP_ARMORS.map((a) => {
-                const ok = reqMet(a.req, player.characteristics);
-                const equipped = armor?.id === a.id;
-                return (
-                  <div className={"shopitem" + (equipped ? " eq" : "")} key={a.id}>
-                    <div className="invinfo">
-                      <b>{a.name}{equipped && <span className="eqtag"> puesta</span>}</b>
-                      <small>{a.note} · resiste derribo/dolor/sangrado</small>
-                      {!ok && <small className="reqline">requiere {reqText(a.req, player.characteristics)}</small>}
-                    </div>
-                    {equipped ? <span className="eqmark">✓</span>
-                      : <button className="small" disabled={gold < a.price || !ok} onClick={() => onBuyArmor(a)}>◈ {a.price}</button>}
-                  </div>
-                );
-              })}
-              <p className="foot">Lo pesado y lo fino se consigue por forja, misión o botín — no en la tienda.</p>
+              <div className="baghead">Escudos (mano izquierda)</div>
+              {SHIELDS.map(gearRow)}
+
+              <div className="baghead">Armaduras (pecho)</div>
+              {SHOP_ARMOR.map(gearRow)}
+              <p className="foot">Lo pesado y lo fino se consigue por forja, misión o botín.</p>
             </>
           ) : (
             <>
@@ -81,13 +89,13 @@ export function Shop({ player, gold, potions, inventory, armor, onBuyPotion, onB
               </div>
               {groups.length === 0 && <p className="foot">No tienes armas que vender.</p>}
               {groups.map(({ item: w, qty }) => {
-                const equipped = w.id === player.weapon.id;
-                const sellable = qty - (equipped ? 1 : 0);
+                const equippedW = w.id === player.weapon.id;
+                const sellable = qty - (equippedW ? 1 : 0);
                 return (
                   <div className="shopitem" key={w.id}>
                     <div className="invinfo">
-                      <b>{w.name} <span className="qty">×{qty}</span>{equipped && <span className="eqtag"> equipada</span>}</b>
-                      <small>vende por ◈ {sellValue(w)} c/u{equipped ? " · conservas la equipada" : ""}</small>
+                      <b>{w.name} <span className="qty">×{qty}</span>{equippedW && <span className="eqtag"> equipada</span>}</b>
+                      <small>vende por ◈ {sellValue(w)} c/u{equippedW ? " · conservas la equipada" : ""}</small>
                     </div>
                     <button className="small" disabled={sellable <= 0} onClick={() => onSell(w.id)}>Vender ◈{sellValue(w)}</button>
                   </div>

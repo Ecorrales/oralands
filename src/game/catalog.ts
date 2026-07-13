@@ -3,7 +3,7 @@ import type { Characteristics, Weapon } from "../engine";
 
 export interface WeaponOpt {
   id: string; name: string; damage: string; accuracy: string;
-  abilities: string[]; req: Partial<Characteristics>; note: string; price: number;
+  abilities: string[]; req: Partial<Characteristics>; note: string; price: number; twoHanded?: boolean;
 }
 
 export interface ArmorOpt {
@@ -44,7 +44,7 @@ export function groupWeapons(list: WeaponOpt[]): WeaponStack[] {
 }
 
 /** Convierte un item del catálogo en el arma equipable del motor. */
-export const toWeapon = (o: WeaponOpt): Weapon => ({ id: o.id, name: o.name, damage: o.damage, accuracy: o.accuracy, abilities: o.abilities });
+export const toWeapon = (o: WeaponOpt): Weapon => ({ id: o.id, name: o.name, damage: o.damage, accuracy: o.accuracy, abilities: o.abilities, twoHanded: o.twoHanded });
 
 // Utilizables
 export const STARTING_POTIONS = 2;

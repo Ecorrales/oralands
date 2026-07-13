@@ -10,7 +10,7 @@ export const LOOT_WEAPONS: WeaponOpt[] = [
   { id: "mace",      name: "Maza",                damage: "2d5", accuracy: "2d5", abilities: ["smash", "bash"], req: { strength: 6 }, note: "contundente", price: 55 },
   { id: "sabre",     name: "Sable",               damage: "2d5", accuracy: "2d6", abilities: ["cut", "stab"], req: { strength: 5, dexterity: 6 }, note: "afilado", price: 55 },
   { id: "rapier",    name: "Estoque",             damage: "1d6", accuracy: "3d5", abilities: ["stab", "quick_stab"], req: { dexterity: 7 }, note: "precisa", price: 35 },
-  { id: "warhammer", name: "Martillo de guerra",  damage: "2d6", accuracy: "1d6", abilities: ["crush", "smash"], req: { strength: 7 }, note: "demoledor", price: 90 },
+  { id: "warhammer", name: "Martillo de guerra",  damage: "2d6", accuracy: "1d6", abilities: ["crush", "smash"], req: { strength: 7 }, note: "demoledor · dos manos", price: 90, twoHanded: true },
 ];
 
 /** Probabilidad de drop crece con la profundidad. Devuelve arma o null. */

@@ -1,5 +1,6 @@
 import type { Creature } from "../engine";
-import type { WeaponOpt, ArmorOpt } from "../game/catalog";
+import type { WeaponOpt } from "../game/catalog";
+import type { GearItem, EquipSlot } from "../game/gear";
 import type { Cargado } from "../game/cargados";
 
 /** Foto de una bajada en curso, guardada en checkpoints seguros (campamento / sala despejada). */
@@ -19,7 +20,8 @@ export interface SavedGame {
   gold: number;
   potions: number;
   inventory: WeaponOpt[];
-  armor: ArmorOpt | null;
+  gear: GearItem[];
+  equipped: Partial<Record<EquipSlot, string>>;
   cargados: Cargado[];
   run: RunState | null;
   xp: number;

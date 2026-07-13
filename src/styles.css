@@ -216,3 +216,19 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .obsbar{height:7px;background:var(--track);border-radius:4px;overflow:hidden;margin:8px 0 4px}
 .obsbar>div{height:100%;background:linear-gradient(90deg,#8fb0c9,#c9a24a);transition:width .2s linear}
 .obslbl{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center}
+
+/* panel de equipo */
+.statspanel.wide{max-width:420px}
+.eqsummary{font-size:12.5px;color:var(--muted);margin:2px 0 12px;font-family:var(--mono)}
+.eqsummary b{color:var(--accent)}
+.eqgrid{display:flex;flex-direction:column;gap:6px}
+.eqrow{display:grid;gap:6px}
+.eqrow.r5{grid-template-columns:repeat(5,1fr)}
+.eqrow.r2{grid-template-columns:repeat(2,1fr)}
+.eqrow.r1{grid-template-columns:1fr}
+.eqcell{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 6px;text-align:center;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.eqcell.filled{border-color:var(--accent)}
+.eqcell.soon{opacity:.5}
+.eqslot{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.eqname{font-size:11.5px;color:var(--ink);font-weight:500}
+.eqhint{font-size:9px;color:var(--muted);font-family:var(--mono)}

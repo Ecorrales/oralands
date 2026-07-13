@@ -1,6 +1,6 @@
 import { useReducer, useRef } from "react";
 import {
-  resolveAbility, getAbility, regenEnergy, isDead, diceroll,
+  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
 } from "../engine";
 import { POTION_HEAL_FRACTION, POTION_COST } from "../game/catalog";
@@ -21,7 +21,11 @@ interface Battle {
 }
 const KIND_ES: Record<string, string> = { undead: "no-muerto", rodent: "alimaña", beast: "bestia" };
 const pillClass = (m: Modifier) => m.kind === "skip" ? "stun" : m.kind === "stat" ? "debuff" : "dot";
-const movesOf = (c: Creature): AbilitySpec[] => (c.weapon.abilities ?? ["smash"]).map(getAbility).filter(Boolean) as AbilitySpec[];
+const movesOf = (c: Creature): AbilitySpec[] => {
+  const ids = [...(c.weapon.abilities ?? ["smash"]), ...(c.grantedAbilities ?? [])];
+  const uniq = ids.filter((id, i) => ids.indexOf(id) === i);
+  return uniq.map(getAbility).filter(Boolean) as AbilitySpec[];
+};
 const bestAffordable = (c: Creature, pool: number): AbilitySpec | null => {
   const ok = movesOf(c).filter((a) => a.energyCost <= pool);
   return ok.length ? ok.reduce((best, a) => (a.energyCost > best.energyCost ? a : best)) : null;
@@ -85,9 +89,10 @@ export function Combat({ player, enemies, potions, onEnd }: {
     const tgt = s.enemies[ti];
     const r = resolveAbility(ab, s.player, tgt, DEFAULT_TUNE);
     if (!r.hit) { pushLog(`${s.player.name} usa ${ab.name} (${r.chance}%) pero falla.`, "var(--muted)"); force(); return; }
-    tgt.hp = Math.max(0, tgt.hp - r.damage);
-    doShake(ti); spawnFloat(ti, "-" + r.damage, "#e8635a");
-    pushLog(`${s.player.name} usa ${ab.name} (${r.chance}%) — ${r.damage} a ${tgt.name}.`, "var(--accent)");
+    const dealt = mitigate(r.damage, tgt.defense ?? 0);
+    tgt.hp = Math.max(0, tgt.hp - dealt);
+    doShake(ti); spawnFloat(ti, "-" + dealt, "#e8635a");
+    pushLog(`${s.player.name} usa ${ab.name} (${r.chance}%) — ${dealt} a ${tgt.name}.`, "var(--accent)");
     if (r.modifiers.length && tgt.hp > 0) { tgt.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! (${r.effect!.chance}%) sobre ${tgt.name}.`, "var(--warn)"); }
     if (isDead(tgt)) { pushLog(`¡${tgt.name} derrotado!`, "var(--success)"); if (allDead()) return endGame(true); s.target = firstAlive(); }
     force();
@@ -133,9 +138,11 @@ export function Combat({ player, enemies, potions, onEnd }: {
     s.groupEnergy -= ability.energyCost;
     const r = resolveAbility(ability, e, s.player, DEFAULT_TUNE);
     if (!r.hit) { pushLog(`${e.name} usa ${ability.name} (${r.chance}%) pero falla.`, "var(--muted)"); force(); setTimeout(stepGroup, 650); return; }
-    s.player.hp = Math.max(0, s.player.hp - r.damage);
-    doShake("player"); spawnFloat("player", "-" + r.damage, "#e8635a");
-    pushLog(`${e.name} usa ${ability.name} (${r.chance}%) — ${r.damage}.`, "var(--danger)");
+    const dealt = mitigate(r.damage, s.player.defense ?? 0);
+    s.player.hp = Math.max(0, s.player.hp - dealt);
+    doShake("player"); spawnFloat("player", "-" + dealt, "#e8635a");
+    const neg = r.damage - dealt;
+    pushLog(`${e.name} usa ${ability.name} (${r.chance}%) — ${dealt}${neg > 0 ? ` (−${neg} por defensa)` : ""}.`, "var(--danger)");
     if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! sobre ${s.player.name}.`, "var(--warn)"); }
     if (isDead(s.player)) { force(); return endGame(false); }
     force(); setTimeout(stepGroup, 700);
