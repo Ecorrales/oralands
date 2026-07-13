@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type Creature, type Characteristics, recomputeDerived } from "../engine";
-import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured } from "../store";
+import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState } from "../store";
 import { STARTING_POTIONS, POTION_PRICE, sellValue, reqMet, toWeapon, type WeaponOpt, type ArmorOpt } from "../game/catalog";
 import { gainXp } from "../game/progression";
 import { normalizeInventory } from "../game/weapons";
@@ -34,6 +34,8 @@ export function App() {
   const [showForge, setShowForge] = useState(false);
   const [levelMsg, setLevelMsg] = useState<string | null>(null);
   const [cargadoMsg, setCargadoMsg] = useState<string | null>(null);
+  const [run, setRun] = useState<RunState | null>(null);
+  const runRef = useRef<RunState | null>(null);
 
   useEffect(() => {
     const num = (v: unknown, d: number) => (Number.isFinite(v as number) ? (v as number) : d);
@@ -42,20 +44,27 @@ export function App() {
         setPlayer(g.player);
         setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));
         setInventory(normalizeInventory(g.inventory)); setArmor(g.armor ?? null); setCargados(g.cargados ?? []);
-        setXp(num(g.xp, 0)); setPoints(num(g.points, 0)); setScreen("hub");
+        setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
+        const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
+        setScreen(savedRun ? "dungeon" : "hub");   // retoma la bajada si quedó una a medias
       } else setScreen("create");
     });
   }, []);
 
   const persist = (p: Creature, g: number, pot: number, inv: WeaponOpt[], arm: ArmorOpt | null, x: number, pts: number, carg: Cargado[]) =>
-    store.save({ version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv, armor: arm, cargados: carg, xp: x, points: pts, savedAt: new Date().toISOString() });
+    store.save({ version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv, armor: arm, cargados: carg, run: runRef.current, xp: x, points: pts, savedAt: new Date().toISOString() });
+
+  function onCheckpoint(rs: RunState) {
+    runRef.current = rs; setRun(rs);
+    if (player) persist(player, gold, potions, inventory, armor, xp, points, cargados);
+  }
 
   async function handleCreate(p: Creature, inv: WeaponOpt[]) {
     setPlayer(p); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setArmor(null); setXp(0); setPoints(0);
     setCargados([]); await persist(p, 0, STARTING_POTIONS, inv, null, 0, 0, []); setScreen("hub");
   }
   async function handleNew() {
-    await store.clear(); setPlayer(null); setGold(0); setPotions(STARTING_POTIONS); setInventory([]); setArmor(null); setXp(0); setPoints(0); setCargados([]); setScreen("create");
+    await store.clear(); setPlayer(null); setGold(0); setPotions(STARTING_POTIONS); setInventory([]); setArmor(null); setXp(0); setPoints(0); setCargados([]); runRef.current = null; setRun(null); setScreen("create");
   }
   async function handleEquip(w: WeaponOpt) {
     if (!player) return;
@@ -140,6 +149,7 @@ export function App() {
     const res = gainXp(next, xp, r.points, r.runXp);
     next.hp = next.maxHp; next.energy = next.maxEnergy;
     // inventario: el que regresa (ya sin el arma robada) + armas recuperadas de cargados vencidos
+    runRef.current = null; setRun(null);   // la bajada terminó
     const inv = [...r.inventory, ...r.recoveredWeapons];
     // cargados: quita los vencidos, agrega el nuevo (respetando el tope)
     let carg = cargados.filter((c) => !r.defeatedCargados.includes(c.id));
@@ -154,7 +164,7 @@ export function App() {
 
   return (
     <div className="stage">
-      <h1 className="title">Dungeon</h1>
+      {(screen === "loading" || screen === "create") && <h1 className="title">Dungeon</h1>}
       {player && screen !== "loading" && screen !== "create" && (
         <StatusBar level={player.level} xp={xp} points={points} onOpenStats={() => setShowStats(true)} />
       )}
@@ -163,8 +173,8 @@ export function App() {
 
       {screen === "loading" && <p className="sub">Cargando…</p>}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
-      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} armor={armor} onFight={() => { setLevelMsg(null); setCargadoMsg(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} />}
-      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} points={points} cargados={cargados} onExit={handleRunEnd} />}
+      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} armor={armor} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} />}
+      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} armor={armor} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyArmor={buyArmor} onSell={sellWeapon} onSellAll={sellDuplicates} onClose={() => setShowShop(false)} />}

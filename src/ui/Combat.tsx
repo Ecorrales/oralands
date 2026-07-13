@@ -159,7 +159,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
   const playerFloat = s.floats.find((f) => f.who === "player");
 
   return (
-    <div className="panel">
+    <div className="panel combat">
       {s.enemies.length > 1 && s.phase !== "over" && <div className="targethint">Toca un enemigo para apuntarle</div>}
       <div className="enemyrow">
         {s.enemies.map((e, i) => {

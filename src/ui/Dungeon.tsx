@@ -6,6 +6,7 @@ import { goldForEnemy, rollWeaponDrop } from "../game/loot";
 import { xpForEnemy } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
+import type { RunState } from "../store/PlayerStore";
 import { Combat } from "./Combat";
 import { StatsInline } from "./StatsInline";
 import { InventoryInline } from "./InventoryInline";
@@ -22,40 +23,59 @@ export interface RunResult {
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
 
-export function Dungeon({ player, potions, inventory, points, cargados, onExit }: {
+export function Dungeon({ player, potions, inventory, points, cargados, resume, onCheckpoint, onExit }: {
   player: Creature; potions: number; inventory: WeaponOpt[]; points: number; cargados: Cargado[];
+  resume: RunState | null; onCheckpoint: (rs: RunState) => void;
   onExit: (r: RunResult) => void;
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
-  const [stage, setStage] = useState(1);
-  const [stageRooms, setStageRooms] = useState(() => rollRoomCount());
-  const [roomInStage, setRoomInStage] = useState(0);
-  const depth = useRef(0);
-  const [group, setGroup] = useState<Creature[]>(() => makeDungeonGroup(0, 1));
+  const [stage, setStage] = useState(resume?.stage ?? 1);
+  const [stageRooms, setStageRooms] = useState(() => resume?.stageRooms ?? rollRoomCount());
+  const [roomInStage, setRoomInStage] = useState(resume?.roomInStage ?? 0);
+  const depth = useRef(resume?.depth ?? 0);
+  const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
-  const [phase, setPhase] = useState<Phase>("fight");
+  const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
-  const [runGold, setRunGold] = useState(0);
-  const [roomGold, setRoomGold] = useState(0);
-  const [drop, setDrop] = useState<WeaponOpt | null>(null);
-  const [picked, setPicked] = useState(false);
-  const [equipped, setEquipped] = useState(false);
-  const [resting, setResting] = useState(false);
+  const [runGold, setRunGold] = useState(resume?.runGold ?? 0);
+  const [roomGold, setRoomGold] = useState(resume?.roomGold ?? 0);
+  const [drop, setDrop] = useState<WeaponOpt | null>(resume?.drop ?? null);
+  const [picked, setPicked] = useState(resume?.picked ?? false);
+  const [equipped, setEquipped] = useState(resume?.equipped ?? false);
+  const [resting, setResting] = useState(resume?.resting ?? false);
   const [ambushGroup, setAmbushGroup] = useState<Creature[] | null>(null);
-  const [stalkerPending, setStalkerPending] = useState(cargados.length > 0);
+  const [stalkerPending, setStalkerPending] = useState(false);
 
-  const working = useRef<Creature>({ ...player, hp: player.maxHp, energy: player.maxEnergy, modifiers: [] });
-  const potionsRef = useRef(potions);
-  const invRef = useRef<WeaponOpt[]>([...inventory]);
-  const runXp = useRef(0);
-  const pointsRef = useRef(points);
-  const campStart = useRef(0);
-  const hpAtCamp = useRef(0);
-  const ambushAt = useRef<number | null>(null);
-  const stalker = useRef<Cargado | null>(cargados.length ? cargados[Math.floor(Math.random() * cargados.length)] : null);
+  const working = useRef<Creature>(resume ? { ...resume.player, modifiers: [] } : { ...player, hp: player.maxHp, energy: player.maxEnergy, modifiers: [] });
+  const potionsRef = useRef(resume?.potions ?? potions);
+  const invRef = useRef<WeaponOpt[]>([...(resume?.inventory ?? inventory)]);
+  const runXp = useRef(resume?.runXp ?? 0);
+  const runGoldRef = useRef(resume?.runGold ?? 0);
+  const pointsRef = useRef(resume?.points ?? points);
+  const campStart = useRef(resume?.campStartMs ?? 0);
+  const hpAtCamp = useRef(resume?.hpAtCamp ?? 0);
+  const ambushAt = useRef<number | null>(resume?.ambushAtSec ?? null);
+  const stalker = useRef<Cargado | null>(
+    resume ? (resume.stalkerId ? cargados.find((c) => c.id === resume.stalkerId) ?? null : null)
+           : (cargados.length ? cargados[Math.floor(Math.random() * cargados.length)] : null)
+  );
   const newCargado = useRef<Cargado | null>(null);
-  const defeated = useRef<string[]>([]);
-  const recovered = useRef<WeaponOpt[]>([]);
+  const defeated = useRef<string[]>(resume?.defeated ? [...resume.defeated] : []);
+  const recovered = useRef<WeaponOpt[]>(resume?.recovered ? [...resume.recovered] : []);
+
+  useEffect(() => { setStalkerPending(stalker.current != null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function buildRun(over: Partial<RunState>): RunState {
+    return {
+      stage, stageRooms, roomInStage, depth: depth.current,
+      player: working.current, potions: potionsRef.current, inventory: invRef.current,
+      runGold: runGoldRef.current, runXp: runXp.current, points: pointsRef.current,
+      phase: "camp", drop, picked, equipped, roomGold,
+      resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
+      stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
+      ...over,
+    };
+  }
 
   const wp = working.current;
   const isLastOfStage = roomInStage + 1 >= stageRooms;
@@ -89,7 +109,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, onExit }
   function awardKill(count: number) {
     let g = 0;
     for (let i = 0; i < count; i++) { g += goldForEnemy(depth.current); runXp.current += xpForEnemy(depth.current); }
-    setRoomGold(g); setRunGold((x) => x + g);
+    runGoldRef.current += g; setRoomGold(g); setRunGold(runGoldRef.current);
   }
   function onDeath(killers: Creature[], cargadoFight: boolean) {
     if (!cargadoFight) {
@@ -97,14 +117,14 @@ export function Dungeon({ player, potions, inventory, points, cargados, onExit }
       const idx = pickStolenIndex(invRef.current, eqId);
       let stolen: WeaponOpt | null = null;
       if (idx >= 0) { stolen = invRef.current[idx]; invRef.current = invRef.current.slice(0, idx).concat(invRef.current.slice(idx + 1)); }
-      newCargado.current = graduateCargado(killers, runGold, stolen);
+      newCargado.current = graduateCargado(killers, runGoldRef.current, stolen);
     }
     setOutcome("dead"); setPhase("result");
   }
   function defeatCargado(c: Cargado) {
     defeated.current.push(c.id);
     if (c.weapon) recovered.current.push(c.weapon);
-    setRunGold((x) => x + c.gold);
+    runGoldRef.current += c.gold; setRunGold(runGoldRef.current);
   }
   function handleCombatEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
@@ -112,30 +132,33 @@ export function Dungeon({ player, potions, inventory, points, cargados, onExit }
     if (!res.survived) { onDeath(group, !!wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(1); }
     else awardKill(group.length);
-    setDrop(rollWeaponDrop(depth.current)); setPicked(false); setEquipped(false);
-    setPhase("cleared");
+    const d = rollWeaponDrop(depth.current);
+    setDrop(d); setPicked(false); setEquipped(false); setPhase("cleared");
+    onCheckpoint(buildRun({ phase: "cleared", drop: d, picked: false, equipped: false }));
   }
   function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
     if (!res.survived) { onDeath(ambushGroup ?? [], false); return; }
-    awardKill(ambushGroup?.length ?? 1); setAmbushGroup(null); setPhase("camp");
+    awardKill(ambushGroup?.length ?? 1); setAmbushGroup(null); setResting(false); ambushAt.current = null; setPhase("camp");
+    onCheckpoint(buildRun({ phase: "camp", resting: false }));
   }
   function addToBag(d: WeaponOpt) { invRef.current = [...invRef.current, d]; }
-  function pickUp(d: WeaponOpt) { addToBag(d); setPicked(true); }
-  function equipDrop(d: WeaponOpt) { addToBag(d); working.current = { ...working.current, weapon: toWeapon(d) }; setPicked(true); setEquipped(true); }
+  function pickUp(d: WeaponOpt) { addToBag(d); setPicked(true); onCheckpoint(buildRun({ phase: "cleared", picked: true })); }
+  function equipDrop(d: WeaponOpt) { addToBag(d); working.current = { ...working.current, weapon: toWeapon(d) }; setPicked(true); setEquipped(true); onCheckpoint(buildRun({ phase: "cleared", picked: true, equipped: true })); }
 
   function advance() {
     depth.current += 1; setRoomInStage((r) => r + 1);
     working.current = { ...working.current, energy: working.current.maxEnergy };
     const nf = nextFight(depth.current, stage); setGroup(nf.enemies); setFightingCargado(nf.cargado); setPhase("fight");
   }
-  function goCamp() { setPhase("camp"); }
+  function goCamp() { setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function startRest() {
     hpAtCamp.current = working.current.hp; campStart.current = Date.now();
     ambushAt.current = Math.random() < AMBUSH_CHANCE ? 4 + Math.random() * (REST_FULL_SEC * 0.7) : null;
     setResting(true);
+    onCheckpoint(buildRun({ phase: "camp", resting: true }));
   }
-  function breakCamp() { setResting(false); }
+  function breakCamp() { setResting(false); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function continueDeeper() {
     const ns = stage + 1;
     depth.current += 1; setStage(ns); setStageRooms(rollRoomCount()); setRoomInStage(0);
@@ -148,12 +171,13 @@ export function Dungeon({ player, potions, inventory, points, cargados, onExit }
     working.current = { ...c, characteristics: { ...c.characteristics, [k]: c.characteristics[k] + 1 } };
     recomputeDerived(working.current);
     pointsRef.current -= 1; force();
+    onCheckpoint(buildRun({ phase: "camp", resting }));
   }
-  function campEquip(w: WeaponOpt) { working.current = { ...working.current, weapon: toWeapon(w) }; force(); }
+  function campEquip(w: WeaponOpt) { working.current = { ...working.current, weapon: toWeapon(w) }; force(); onCheckpoint(buildRun({ phase: "camp", resting })); }
   function leaveDungeon() { setResting(false); setOutcome("won"); setPhase("result"); }
   function finish() {
     onExit({
-      player: wp, outcome, runGold, potions: potionsRef.current, inventory: invRef.current,
+      player: wp, outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
       runXp: runXp.current, points: pointsRef.current,
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
     });
