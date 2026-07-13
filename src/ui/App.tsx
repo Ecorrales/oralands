@@ -120,7 +120,9 @@ export function App() {
     materialsRef.current = {}; setMaterials({});
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
-    await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); setScreen("hub");
+    setScreen("hub");
+    try { await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); }
+    catch (e) { console.error("No se pudo guardar la partida:", e); }
   }
   async function handleNew() {
     await store.clear(); setPlayer(null); setGold(0); setPotions(STARTING_POTIONS); setInventory([]);

@@ -14,6 +14,19 @@ import type { PlayerStore, SavedGame } from "./PlayerStore";
 
 export interface AuthInfo { uid: string; email: string | null; isAnonymous: boolean; }
 
+/** Quita recursivamente las claves con valor undefined (RTDB no las acepta). */
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(stripUndefined) as unknown as T;
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) out[k] = stripUndefined(v);
+    }
+    return out as T;
+  }
+  return value;
+}
+
 export class FirebaseStore implements PlayerStore {
   private db;
   private auth;
@@ -77,7 +90,8 @@ export class FirebaseStore implements PlayerStore {
     return snap.exists() ? (snap.val() as SavedGame) : null;
   }
   async save(game: SavedGame): Promise<void> {
-    await set(await this.node(), game);
+    // RTDB rechaza valores undefined (p. ej. weapon.twoHanded en armas de una mano).
+    await set(await this.node(), stripUndefined(game));
   }
   async clear(): Promise<void> {
     await remove(await this.node());
