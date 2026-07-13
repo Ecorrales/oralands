@@ -20,6 +20,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
   onForge: (r: Recipe) => void; onClose: () => void;
 }) {
   const [cat, setCat] = useState<ForgeCat>("armas");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const shown = RECIPES.filter((r) => catOf(r) === cat);
 
   return (
@@ -33,7 +34,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
 
         <div className="tabs">
           {CATS.map((c) => (
-            <button key={c.id} className={"tab" + (cat === c.id ? " on" : "")} onClick={() => setCat(c.id)}>{c.label}</button>
+            <button key={c.id} className={"tab" + (cat === c.id ? " on" : "")} onClick={() => { setCat(c.id); setConfirmId(null); }}>{c.label}</button>
           ))}
         </div>
 
@@ -54,7 +55,15 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
                       : <small>defensa +{r.gear!.defense} · {r.gear!.note}</small>}
                     {!reqOk && <small className="reqline">requiere {reqText(reqObj, player.characteristics)}</small>}
                   </div>
-                  <button className="small" disabled={!chk.ok} onClick={() => onForge(r)}>Forjar</button>
+                  {confirmId === r.id
+                    ? (
+                      <div className="confirmrow">
+                        <span className="confirmq">¿Forjar?</span>
+                        <button className="small" onClick={() => { onForge(r); setConfirmId(null); }}>Sí</button>
+                        <button className="small ghost" onClick={() => setConfirmId(null)}>No</button>
+                      </div>
+                    )
+                    : <button className="small" disabled={!chk.ok} onClick={() => setConfirmId(r.id)}>Forjar</button>}
                 </div>
                 <div className="forgecost">
                   <span className={"costchip" + (chk.gold ? "" : " miss")}>◈ {r.gold}</span>

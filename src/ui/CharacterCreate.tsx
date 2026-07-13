@@ -9,6 +9,14 @@ import {
 } from "../game/catalog";
 import { getAbility } from "../engine";
 
+// Qué hace cada característica (sacado de las fórmulas reales del motor).
+const STAT_DESC: Record<keyof Characteristics, string> = {
+  strength: "Energía máxima y regeneración por turno (mueves más golpes). También sube el daño de los ataques brutos.",
+  vitality: "Tu vida máxima. Cuánto castigo aguantas antes de caer.",
+  dexterity: "Precisión al pegar y evasión al esquivar. La velocidad y la mano fina.",
+  intelligence: "Precisión al pegar y qué tanto hallas al rebuscar salas. El ojo astuto.",
+};
+
 export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventory: WeaponOpt[]) => void }) {
   const [name, setName] = useState("");
   const [stats, setStats] = useState<Characteristics>({ strength: 5, vitality: 5, dexterity: 5, intelligence: 5 });
@@ -46,9 +54,13 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
         placeholder="¿Cómo te llamas, aventurero?" onChange={(e) => setName(e.target.value)} />
 
       <div className="cap">Reparte tus puntos <span className="soft">(mín 1 · máx 10)</span></div>
+      <p className="statintro">Cada característica cambia cómo juegas. Piensa tu estilo antes de repartir.</p>
       {STAT_KEYS.map((k) => (
         <div className="statrow" key={k}>
-          <span className="sname">{STAT_ES[k]}</span>
+          <div className="snamewrap">
+            <span className="sname">{STAT_ES[k]}</span>
+            <span className="sdesc">{STAT_DESC[k]}</span>
+          </div>
           <button className="step" disabled={stats[k] <= STAT_MIN} onClick={() => bump(k, -1)}>−</button>
           <b className="sval">{stats[k]}</b>
           <button className="step" disabled={stats[k] >= STAT_MAX || remaining <= 0} onClick={() => bump(k, 1)}>+</button>

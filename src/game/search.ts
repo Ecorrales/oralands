@@ -12,7 +12,7 @@ export const searchChance = (dex: number, int: number): number =>
 
 /** Oro hallado, escala suave con la profundidad. */
 export const searchGold = (depth: number): number =>
-  2 + depth + Math.floor(Math.random() * (4 + depth));
+  2 + Math.floor(2 * Math.sqrt(depth)) + Math.floor(Math.random() * 3);
 
 type Biome = "cripta" | "madriguera" | "cueva";
 export function biomeOf(enemies: Creature[]): Biome {

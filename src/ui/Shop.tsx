@@ -6,18 +6,21 @@ import {
   type WeaponOpt,
 } from "../game/catalog";
 import { SHIELDS, SHOP_ARMOR, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
+import { MATERIALS, matIcon, matName, matSell, type Mats } from "../game/materials";
 
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
   Object.entries(req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
 
-export function Shop({ player, gold, potions, inventory, equipped, onBuyPotion, onBuyWeapon, onBuyGear, onSell, onSellAll, onClose }: {
-  player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equipped: Partial<Record<EquipSlot, string>>;
+export function Shop({ player, gold, potions, inventory, equipped, materials, onBuyPotion, onBuyWeapon, onBuyGear, onSell, onSellAll, onSellMaterial, onSellAllMaterials, onClose }: {
+  player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equipped: Partial<Record<EquipSlot, string>>; materials: Mats;
   onBuyPotion: () => void; onBuyWeapon: (w: WeaponOpt) => void; onBuyGear: (g: GearItem) => void;
-  onSell: (id: string) => void; onSellAll: () => void; onClose: () => void;
+  onSell: (id: string) => void; onSellAll: () => void; onSellMaterial: (id: string, qty: number) => void; onSellAllMaterials: () => void; onClose: () => void;
 }) {
   const [tab, setTab] = useState<"buy" | "sell">("buy");
   const groups = groupWeapons(inventory);
+  const ownedMats = MATERIALS.filter((m) => (materials[m.id] ?? 0) > 0);
+  const allMatsEarn = ownedMats.reduce((s, m) => s + matSell(m.id) * materials[m.id], 0);
   const dupEarn = (() => { const seen = new Set<string>(); let sum = 0; for (const w of inventory) { if (seen.has(w.id)) sum += sellValue(w); else seen.add(w.id); } return sum; })();
 
   const gearRow = (g: GearItem) => {
@@ -98,6 +101,27 @@ export function Shop({ player, gold, potions, inventory, equipped, onBuyPotion, 
                       <small>vende por ◈ {sellValue(w)} c/u{equippedW ? " · conservas la equipada" : ""}</small>
                     </div>
                     <button className="small" disabled={sellable <= 0} onClick={() => onSell(w.id)}>Vender ◈{sellValue(w)}</button>
+                  </div>
+                );
+              })}
+
+              <div className="selltop" style={{ marginTop: 14 }}>
+                <div className="baghead" style={{ margin: 0 }}>Materiales</div>
+                {ownedMats.length > 0 && <button className="small" onClick={onSellAllMaterials}>Vender todo +◈{allMatsEarn}</button>}
+              </div>
+              {ownedMats.length === 0 && <p className="foot">No tienes materiales que vender.</p>}
+              {ownedMats.map((m) => {
+                const have = materials[m.id];
+                return (
+                  <div className="shopitem" key={m.id}>
+                    <div className="invinfo">
+                      <b>{matIcon(m.id)} {matName(m.id)} <span className="qty">×{have}</span></b>
+                      <small>vende por ◈ {matSell(m.id)} c/u</small>
+                    </div>
+                    <div className="matsellbtns">
+                      <button className="small ghost" onClick={() => onSellMaterial(m.id, 1)}>−1 ◈{matSell(m.id)}</button>
+                      <button className="small" onClick={() => onSellMaterial(m.id, have)}>Todo ◈{matSell(m.id) * have}</button>
+                    </div>
                   </div>
                 );
               })}

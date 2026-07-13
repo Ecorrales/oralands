@@ -3,7 +3,7 @@ import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, type Mats } from "../game/materials";
-import { goldForEnemy, rollWeaponDrop } from "../game/loot";
+import { goldForEnemy, goldDropChance, rollWeaponDrop } from "../game/loot";
 import { xpForEnemy } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
 import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
@@ -142,9 +142,12 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     return { enemies: makeDungeonGroup(d, st), cargado: null };
   }
 
-  function awardKill(count: number) {
+  function awardKill(enemies: Creature[]) {
     let g = 0;
-    for (let i = 0; i < count; i++) { g += goldForEnemy(depth.current); runXp.current += xpForEnemy(depth.current); }
+    for (const e of enemies) {
+      runXp.current += xpForEnemy(depth.current);
+      if (Math.random() < goldDropChance(enemyKind(e))) g += goldForEnemy(depth.current);
+    }
     runGoldRef.current += g; setRoomGold(g); setRunGold(runGoldRef.current);
   }
   function onDeath(killers: Creature[], cargadoFight: boolean) {
@@ -166,8 +169,8 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
     working.current = res.player; potionsRef.current = res.potions;
     const wasCargado = fightingCargado;
     if (!res.survived) { onDeath(group, !!wasCargado); return; }
-    if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(1); }
-    else awardKill(group.length);
+    if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
+    else awardKill(group);
     const kind = enemyKind(group[0] ?? working.current);
     runMats.current = mergeMats(runMats.current, rollRoomMaterials(kind, depth.current));
     const d = rollWeaponDrop(depth.current);
@@ -179,7 +182,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
   function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
     if (!res.survived) { onDeath(ambushGroup ?? [], false); return; }
-    awardKill(ambushGroup?.length ?? 1); setAmbushGroup(null); setResting(false); ambushAt.current = null;
+    awardKill(ambushGroup ?? []); setAmbushGroup(null); setResting(false); ambushAt.current = null;
     const back = ambushReturn.current;
     setPhase(back);
     onCheckpoint(buildRun({ phase: back, resting: false }));
@@ -271,7 +274,7 @@ export function Dungeon({ player, potions, inventory, points, cargados, resume, 
         <div className="panel">
           <div className="cap">Sala despejada</div>
           <div className="loot">
-            <div className="lootgold">◈ +{roomGold} oro</div>
+            <div className="lootgold">{roomGold > 0 ? `◈ +${roomGold} oro` : "Sin oro — vende el botín y materiales"}</div>
             {drop ? (
               <div className={"dropcard" + (picked ? " done" : "")}>
                 <div className="dropinfo"><b>{drop.name}</b><small>daño {drop.damage} · {moveText(drop.abilities)}</small></div>

@@ -1,8 +1,17 @@
 // Tablas de botín. Oro por enemigo + drops de arma, escalando con profundidad.
 import type { WeaponOpt } from "./catalog";
 
+// No todos los enemigos sueltan oro. Los animales rara vez cargan monedas —su valor son
+// sus materiales, que vendes—; los no-muertos y humanoides sí traen algo. Esto empuja la
+// economía a apoyarse también en vender botín y materiales, no solo en oro directo.
+export function goldDropChance(kind: "undead" | "rodent" | "beast"): number {
+  return kind === "undead" ? 0.65 : kind === "rodent" ? 0.10 : 0.15;
+}
+
+// Oro por enemigo: crece con la profundidad pero SUBLINEAL (raíz), para que el inicio
+// siga siendo escaso y lo hondo no se vuelva una lluvia de oro. Dial de economía.
 export function goldForEnemy(depth: number): number {
-  return 3 + depth * 2 + Math.floor(Math.random() * 6);
+  return 2 + Math.floor(4 * Math.sqrt(depth)) + Math.floor(Math.random() * 4);
 }
 
 // Armas de botín (las fuertes que no están al crear el personaje).

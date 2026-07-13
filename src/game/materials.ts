@@ -17,6 +17,12 @@ const byId = new Map(MATERIALS.map((m) => [m.id, m]));
 export const matName = (id: string): string => byId.get(id)?.name ?? id;
 export const matIcon = (id: string): string => byId.get(id)?.icon ?? "▪";
 
+// Precio de venta por unidad: escombros baratos, partes de monstruo algo más.
+const MAT_PRICE: Record<string, number> = {
+  wood: 2, steel: 4, stone: 2, bone: 3, fang: 5, claw: 4, hide: 3,
+};
+export const matSell = (id: string): number => MAT_PRICE[id] ?? 1;
+
 export type Mats = Record<string, number>;
 export function mergeMats(into: Mats, add: Mats): Mats {
   const out = { ...into };

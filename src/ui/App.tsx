@@ -14,7 +14,7 @@ import { EquipPanel } from "./EquipPanel";
 import { Shop } from "./Shop";
 import { Forge } from "./Forge";
 import { canForge, type Recipe } from "../game/forge";
-import { mergeMats, type Mats } from "../game/materials";
+import { mergeMats, matSell, type Mats } from "../game/materials";
 import { MAX_CARGADOS, type Cargado } from "../game/cargados";
 import type { RunResult } from "./Dungeon";
 
@@ -151,6 +151,28 @@ export function App() {
     const ng = gold - w.price, ninv = [...inventory, w];
     setGold(ng); setInventory(ninv); if (player) persist(player, ng, potions, ninv, xp, points, cargados);
   }
+  function sellAllMaterials() {
+    if (!player) return;
+    let earned = 0;
+    for (const id of Object.keys(materials)) earned += matSell(id) * materials[id];
+    if (earned <= 0) return;
+    const ng = gold + earned;
+    materialsRef.current = {}; setMaterials({}); setGold(ng);
+    persist(player, ng, potions, inventory, xp, points, cargados);
+  }
+
+  function sellMaterial(id: string, qty: number) {
+    if (!player) return;
+    const have = materials[id] ?? 0;
+    const n = Math.min(qty, have);
+    if (n <= 0) return;
+    const mats = { ...materials, [id]: have - n };
+    if (mats[id] <= 0) delete mats[id];
+    const ng = gold + matSell(id) * n;
+    materialsRef.current = mats; setMaterials(mats); setGold(ng);
+    persist(player, ng, potions, inventory, xp, points, cargados);
+  }
+
   function sellDuplicates() {
     if (!player) return;
     const seen = new Set<string>(); const kept: WeaponOpt[] = []; let earned = 0;
@@ -228,7 +250,7 @@ export function App() {
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
-      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onClose={() => setShowShop(false)} />}
+      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
       {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}
     </div>
   );

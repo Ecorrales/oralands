@@ -16,3 +16,37 @@ Implicaciones / decisiones a definir cuando toque:
 - Encaja con la visión MMORPG: primer contenido de mundo **compartido** real, cimentado sobre el guardado en la nube que ya existe.
 
 Orden sugerido: primero **fase 2 (crecimiento personal del némesis)**, y el salto a Overlord global como fase 3 (ya con backend compartido).
+
+## El Pueblo — evolución del refugio (VISIÓN)
+El "refugio" (hoy un menú de botones) crece a un **pueblo con edificios**, cada uno un sistema. Se desbloquean/mejoran con progreso (oro, materiales, misiones), dando sensación de construir tu base.
+- **Herrería** (ya existe): forja armas/escudos/armadura con materiales.
+- **Posada / INN**: descansar (cura), quizá guardar, punto social. Podría dar buffs temporales ("comida caliente").
+- **Herbolario**: pociones y consumibles (hoy la poción vive en la tienda); recetas de pociones con hierbas/materiales.
+- **Gremio de cazadores**: contratos de caza (mata X bestias / consigue Y colmillos) → recompensas. Da propósito a farmear materiales específicos.
+- **Tablón de misiones**: misiones diarias/semanales. AQUÍ se anuncia cuando **nace un Overlord** (conecta con la visión del némesis global) — "Se avista al Overlord Vorlk en las criptas". Primer feed de eventos del mundo compartido.
+- Tienda general: vender excedentes (incl. materiales — ver abajo), comprar básicos.
+Notas: el pueblo es el marco que unifica economía (vender materiales), progresión (misiones), y mundo compartido (avisos de Overlord). Se puede construir edificio por edificio.
+
+## Vender materiales (INMEDIATO, chico)
+El jugador junta muchos materiales y no todos se usan en forja. Agregar venta de materiales en la tienda (tab Vender): precio bajo por unidad (tipo sellValue). Resuelve el excedente y da flujo de oro alternativo.
+
+## Criptas navegables — de pasillo lineal a mapa explorable (VISIÓN GRANDE)
+Hoy el dungeon es lineal: despejas sala → avanzas → siguiente sala, en una sola dirección. La idea de Nox: al terminar una sala, poder **navegar en 4 direcciones** (Izquierda · Derecha · Adelante · Atrás), convirtiendo la cripta en un **mapa 2D explorable** en vez de un pasillo.
+
+Visión:
+- **Cripta autogenerada aleatoriamente** como un grid/mapa de salas conectadas (procedural). Cada sala tiene salidas N/S/E/O hacia salas vecinas.
+- **Exploración libre**: navegas la cripta todo lo que quieras hasta decidir salir (el "camp/salir" sigue siendo la decisión de asegurar botín). Puedes volver sobre tus pasos (Atrás), rodear, elegir ruta.
+- Abre la puerta a:
+  - **Mapa/minimapa** visible (salas visitadas, no visitadas, dónde estás).
+  - **Salas especiales** colocadas en el mapa: tesoro, jefe, altar, tienda-en-mazmorra, puzzle, atajo.
+  - **Buscar cosas / secretos**: pasajes ocultos, salas que solo aparecen si rebuscas (conecta con la mecánica de rebuscar que ya gusta).
+  - Decisiones espaciales reales: "¿voy por el pasillo peligroso al tesoro, o rodeo?".
+
+Implicaciones técnicas (por qué es fase grande):
+- Reemplaza el modelo actual `stage/roomInStage/depth` (lineal) por un **grafo/grid de salas** con coordenadas y conexiones.
+- Generación procedural del mapa (algoritmo de layout: drunkard walk, BSP, salas+corredores).
+- Estado de exploración persistente en RunState (mapa generado, salas visitadas, posición actual) — el guardado por checkpoints tendría que serializar el mapa.
+- La "profundidad" para escalado de dificultad/loot pasaría a derivarse de distancia al inicio o de un contador de salas exploradas.
+- UI nueva: controles de navegación + minimapa.
+
+Notas: es probablemente el cambio más grande de todos — redefine el núcleo del crawl. Vale hacerlo cuando el resto de sistemas (economía, pueblo, némesis) estén asentados, porque toca la espina dorsal del dungeon. Encaja con la visión roguelike/MMO: mapas procedurales = rejugabilidad infinita.
