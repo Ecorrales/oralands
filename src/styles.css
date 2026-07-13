@@ -223,13 +223,26 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .eqsummary{font-size:12.5px;color:var(--muted);margin:2px 0 12px;font-family:var(--mono)}
 .eqsummary b{color:var(--accent)}
 .eqgrid{display:flex;flex-direction:column;gap:6px}
-.eqrow{display:grid;gap:6px}
+.eqrow{display:grid;gap:5px}
 .eqrow.r5{grid-template-columns:repeat(5,1fr)}
 .eqrow.r2{grid-template-columns:repeat(2,1fr)}
 .eqrow.r1{grid-template-columns:1fr}
-.eqcell{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 6px;text-align:center;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.eqcell{min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 4px;text-align:center;min-height:56px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.eqcell .eqslot,.eqcell .eqname,.eqcell .eqhint{overflow-wrap:anywhere}
 .eqcell.filled{border-color:var(--accent)}
 .eqcell.soon{opacity:.5}
 .eqslot{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
 .eqname{font-size:11.5px;color:var(--ink);font-weight:500}
 .eqhint{font-size:9px;color:var(--muted);font-family:var(--mono)}
+
+/* subtabs dentro de paneles (mochila, herrería) + lista de materiales */
+.subtabs{display:flex;gap:6px;margin:2px 0 12px}
+.subtab{flex:1;font-size:12.5px;padding:7px}
+.subtab.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.matgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.matcard{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.matcard .mi{font-size:18px;line-height:1}
+.matcard .mn{font-size:12px;color:var(--muted)}
+.matcard .mq{margin-left:auto;font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600}
+.matempty{font-size:12px;color:var(--dim);padding:6px 2px}
+.forgeempty{font-size:12.5px;color:var(--muted);text-align:center;padding:24px 8px;font-style:italic}

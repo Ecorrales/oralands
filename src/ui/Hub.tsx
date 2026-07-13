@@ -1,7 +1,8 @@
+import { useState } from "react";
 import type { Creature } from "../engine";
 import { STAT_KEYS, STAT_ES, type WeaponOpt } from "../game/catalog";
 import type { GearItem } from "../game/gear";
-import { matsSummary, type Mats } from "../game/materials";
+import { MATERIALS, matIcon, matName, type Mats } from "../game/materials";
 import type { Cargado } from "../game/cargados";
 import { InventoryInline } from "./InventoryInline";
 
@@ -9,6 +10,8 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
   player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equippedGear: GearItem[]; cargados: Cargado[];
   onFight: () => void; onNew: () => void; onEquip: (w: WeaponOpt) => void; onOpenShop: () => void; onOpenForge: () => void; onOpenEquip: () => void; materials: Mats;
 }) {
+  const [bagTab, setBagTab] = useState<"armas" | "materiales">("armas");
+  const ownedMats = MATERIALS.filter((m) => (materials[m.id] ?? 0) > 0);
   return (
     <div className="panel">
       <div className="cap">Tu personaje <span className="tag">guardado</span></div>
@@ -34,9 +37,27 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         <div className="bagline"><span className="bagicon">⚗</span> Pociones <b>{potions}</b></div>
         <div className="bagline"><span className="bagicon">◈</span> Oro <b>{gold}</b></div>
         <div className="bagline"><span className="bagicon">◈</span> Equipo <b>{equippedGear.length ? equippedGear.map((g) => g.name).join(" · ") : "—"}</b></div>
-        <div className="bagline"><span className="bagicon">⚒</span> Materiales <b>{matsSummary(materials) || "—"}</b></div>
-        <div className="baghead">Armas</div>
-        <InventoryInline player={player} inventory={inventory} onEquip={onEquip} />
+
+        <div className="subtabs">
+          <button className={"subtab" + (bagTab === "armas" ? " on" : "")} onClick={() => setBagTab("armas")}>Armas</button>
+          <button className={"subtab" + (bagTab === "materiales" ? " on" : "")} onClick={() => setBagTab("materiales")}>Materiales{ownedMats.length ? ` (${ownedMats.length})` : ""}</button>
+        </div>
+
+        {bagTab === "armas"
+          ? <InventoryInline player={player} inventory={inventory} onEquip={onEquip} />
+          : ownedMats.length === 0
+            ? <div className="matempty">Aún no tienes materiales. Los juntas al pelear y rebuscar salas.</div>
+            : (
+              <div className="matgrid">
+                {ownedMats.map((m) => (
+                  <div className="matcard" key={m.id}>
+                    <span className="mi">{matIcon(m.id)}</span>
+                    <span className="mn">{matName(m.id)}</span>
+                    <span className="mq">{materials[m.id]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
       </div>
 
       {cargados.length > 0 && (

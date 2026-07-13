@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
 import { RECIPES, canForge, type Recipe } from "../game/forge";
@@ -8,10 +9,18 @@ const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); 
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
   Object.entries(req).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 
+type ForgeCat = "armas" | "escudos" | "armadura";
+const catOf = (r: Recipe): ForgeCat => r.kind === "weapon" ? "armas" : r.gear?.slot === "offhand" ? "escudos" : "armadura";
+const CATS: { id: ForgeCat; label: string }[] = [
+  { id: "armas", label: "Armas" }, { id: "escudos", label: "Escudos" }, { id: "armadura", label: "Armadura" },
+];
+
 export function Forge({ player, gold, materials, onForge, onClose }: {
   player: Creature; gold: number; materials: Mats;
   onForge: (r: Recipe) => void; onClose: () => void;
 }) {
+  const [cat, setCat] = useState<ForgeCat>("armas");
+  const shown = RECIPES.filter((r) => catOf(r) === cat);
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -22,8 +31,15 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
         </div>
         <p className="foot" style={{ marginTop: 0 }}>Entrega materiales (los juntas al pelear y rebuscar) + oro para forjar equipo que no se compra en ningún lado.</p>
 
+        <div className="tabs">
+          {CATS.map((c) => (
+            <button key={c.id} className={"tab" + (cat === c.id ? " on" : "")} onClick={() => setCat(c.id)}>{c.label}</button>
+          ))}
+        </div>
+
         <div className="shopbody">
-          {RECIPES.map((r) => {
+          {shown.length === 0 && <div className="forgeempty">Aún no hay recetas de {cat === "escudos" ? "escudos" : cat} — próximamente.</div>}
+          {shown.map((r) => {
             const chk = canForge(r, gold, materials, player.characteristics);
             const out = r.kind === "weapon" ? r.weapon! : r.gear!;
             const reqObj = r.kind === "weapon" ? r.weapon!.req : r.gear!.req;

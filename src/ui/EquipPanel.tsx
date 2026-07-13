@@ -28,7 +28,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
         <div className="eqslot">{SLOT_ES[slot]}</div>
         <div className="eqname">{it ? it.name : fillable ? "vacío" : "—"}</div>
         {it && <div className="eqhint">def +{it.defense ?? 0}{it.evasion ? ` · ev ${it.evasion > 0 ? "+" : ""}${it.evasion}` : ""}</div>}
-        {!it && !fillable && <div className="eqhint">próximamente</div>}
+        {!it && !fillable && <div className="eqhint">pronto</div>}
       </div>
     );
   };
