@@ -34,7 +34,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
         <div className="eqcell filled" key={slot}>
           <div className="eqslot">{slotLabel(slot)}</div>
           <div className="eqname">{tName(player.weapon.name)}{player.weapon.twoHanded ? " (2M)" : ""}</div>
-          <div className="eqhint">se cambia en la mochila</div>
+          <div className="eqhint">{t("equip.changeInBag")}</div>
         </div>
       );
     }
@@ -45,7 +45,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
         <div className="eqslot">{slotLabel(slot)}</div>
         <div className="eqname">{it ? it.name : fillable ? t("common.empty") : "—"}</div>
         {it && <div className="eqhint">def +{it.defense ?? 0}{it.evasion ? ` · ev ${it.evasion > 0 ? "+" : ""}${it.evasion}` : ""}</div>}
-        {!it && !fillable && <div className="eqhint">pronto</div>}
+        {!it && !fillable && <div className="eqhint">{t("equip.soon")}</div>}
       </div>
     );
   };
@@ -56,7 +56,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
   return (
     <div className="overlay" onClick={onClose}>
       <div className="statspanel wide" onClick={(e) => e.stopPropagation()}>
-        <div className="cap">Equipo · {player.name}</div>
+        <div className="cap">{t("equip.title", { name: player.name })}</div>
         <div className="eqsummary">{t("equip.damage")}<b>{dmgMin}–{dmgMax}</b>{t("equip.accuracy")}<b>{accEst}</b></div>
         <div className="eqsummary">{t("equip.defense")}<b>{player.defense ?? 0}</b>{t("equip.evasion")}<b>{(player.evasionBonus ?? 0) >= 0 ? "+" : ""}{player.evasionBonus ?? 0}</b></div>
         <div className="eqhelp">{t("equip.rangeHint")}</div>
@@ -67,7 +67,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
           ))}
         </div>
 
-        <div className="cap" style={{ marginTop: 16 }}>Tu equipo</div>
+        <div className="cap" style={{ marginTop: 16 }}>{t("equip.yourGear")}</div>
         {owned.length === 0 && <p className="foot">{t("equip.noGear")}</p>}
         {owned.map((g) => {
           const on = equipped[g.slot] === g.id;
@@ -88,7 +88,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
         })}
 
         <div className="actions" style={{ marginTop: 14 }}>
-          <button className="primary" onClick={onClose}>Cerrar</button>
+          <button className="primary" onClick={onClose}>{t("common.close")}</button>
         </div>
       </div>
     </div>

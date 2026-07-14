@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { t, statAbbr } from "../game/i18n";
+import { t, statAbbr, tName } from "../game/i18n";
 import type { Creature } from "../engine";
 import { STAT_KEYS, STAT_ES, type WeaponOpt } from "../game/catalog";
 import type { GearItem } from "../game/gear";
@@ -16,12 +16,12 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
   const ownedMats = MATERIALS.filter((m) => (materials[m.id] ?? 0) > 0);
   return (
     <div className="panel">
-      <div className="cap">Tu personaje <span className="tag">guardado</span></div>
+      <div className="cap">{t("hub.characterSheet")} <span className="tag">{t("hub.saved")}</span></div>
       <div className="sheet">
         <div className="sheethead">
           <div>
             <div className="sheetname">{player.name}</div>
-            <div className="sheetsub">Nv {player.level} · {player.weapon.name}{player.weapon.twoHanded ? " (2M)" : ""} · def {player.defense ?? 0}</div>
+            <div className="sheetsub">{t("common.lvAbbr")} {player.level} · {player.weapon.name}{player.weapon.twoHanded ? " (2M)" : ""} · def {player.defense ?? 0}</div>
           </div>
           <div className="goldbox">◈ {gold} · ⚗ {potions}</div>
         </div>
@@ -34,11 +34,11 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         </div>
       </div>
 
-      <div className="cap">Mochila</div>
+      <div className="cap">{t("hub.backpack")}</div>
       <div className="bag">
-        <div className="bagline"><span className="bagicon">⚗</span> Pociones <b>{potions}</b></div>
-        <div className="bagline"><span className="bagicon">◈</span> Oro <b>{gold}</b></div>
-        <div className="bagline"><span className="bagicon">◈</span> Equipo <b>{equippedGear.length ? equippedGear.map((g) => g.name).join(" · ") : "—"}</b></div>
+        <div className="bagline"><span className="bagicon">⚗</span> {t("hub.potions")} <b>{potions}</b></div>
+        <div className="bagline"><span className="bagicon">◈</span> {t("common.gold")} <b>{gold}</b></div>
+        <div className="bagline"><span className="bagicon">◈</span> {t("hub.bagLoot")} <b>{equippedGear.length ? equippedGear.map((g) => g.name).join(" · ") : "—"}</b></div>
 
         <div className="subtabs">
           <button className={"subtab" + (bagTab === "armas" ? " on" : "")} onClick={() => setBagTab("armas")}>{t("hub.bagWeapons")}</button>
@@ -73,7 +73,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
               <div key={c.id} className="cargadoline">
                 <div className="invinfo">
                   <b>{c.creature.name}</b>
-                  <small>Nv {c.creature.level} · {c.kindLabel} · lleva ◈ {c.gold}{c.weapon ? ` + tu ${c.weapon.name}` : ""}</small>
+                  <small>{t("common.lvAbbr")} {c.creature.level} · {tName(c.kindLabel)} · {t("hub.nemCarries", { gold: c.gold, weapon: c.weapon ? t("hub.plusYour", { weapon: c.weapon.name }) : "" })}</small>
                 </div>
               </div>
             ))}

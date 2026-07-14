@@ -13,7 +13,7 @@ const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteris
 type ForgeCat = "armas" | "escudos" | "armadura";
 const catOf = (r: Recipe): ForgeCat => r.kind === "weapon" ? "armas" : r.gear?.slot === "offhand" ? "escudos" : "armadura";
 const CATS: { id: ForgeCat; label: string }[] = [
-  { id: "armas", label: "Armas" }, { id: "escudos", label: "Escudos" }, { id: "armadura", label: "Armadura" },
+  { id: "armas", label: "forge.catWeapons" }, { id: "escudos", label: "forge.catShields" }, { id: "armadura", label: "forge.catArmor" },
 ];
 
 export function Forge({ player, gold, materials, onForge, onClose }: {
@@ -35,7 +35,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
 
         <div className="tabs">
           {CATS.map((c) => (
-            <button key={c.id} className={"tab" + (cat === c.id ? " on" : "")} onClick={() => { setCat(c.id); setConfirmId(null); }}>{c.label}</button>
+            <button key={c.id} className={"tab" + (cat === c.id ? " on" : "")} onClick={() => { setCat(c.id); setConfirmId(null); }}>{t(c.label)}</button>
           ))}
         </div>
 
@@ -53,8 +53,8 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
                     <b>{tName(out.name)}</b>
                     {r.kind === "weapon"
                       ? <small>{t("common.damageLbl")}{r.weapon!.damage} · {moveText(r.weapon!.abilities)}</small>
-                      : <small>defensa +{r.gear!.defense} · {r.gear!.note}</small>}
-                    {!reqOk && <small className="reqline">requiere {reqText(reqObj, player.characteristics)}</small>}
+                      : <small>{t("common.defenseLbl")} +{r.gear!.defense} · {tName(r.gear!.note)}</small>}
+                    {!reqOk && <small className="reqline">{t("shop.requires", { req: reqText(reqObj, player.characteristics) })}</small>}
                   </div>
                   {confirmId === r.id
                     ? (
@@ -64,7 +64,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
                         <button className="small ghost" onClick={() => setConfirmId(null)}>No</button>
                       </div>
                     )
-                    : <button className="small" disabled={!chk.ok} onClick={() => setConfirmId(r.id)}>Forjar</button>}
+                    : <button className="small" disabled={!chk.ok} onClick={() => setConfirmId(r.id)}>{t("common.forgeVerb")}</button>}
                 </div>
                 <div className="forgecost">
                   <span className={"costchip" + (chk.gold ? "" : " miss")}>◈ {r.gold}</span>
@@ -79,7 +79,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
         </div>
 
         <div className="actions" style={{ marginTop: 14 }}>
-          <button className="primary" onClick={onClose}>Cerrar</button>
+          <button className="primary" onClick={onClose}>{t("common.close")}</button>
         </div>
       </div>
     </div>
