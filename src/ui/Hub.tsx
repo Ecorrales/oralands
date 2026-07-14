@@ -21,7 +21,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         <div className="sheethead">
           <div>
             <div className="sheetname">{player.name}</div>
-            <div className="sheetsub">{t("common.lvAbbr")} {player.level} · {player.weapon.name}{player.weapon.twoHanded ? " (2M)" : ""} · def {player.defense ?? 0}</div>
+            <div className="sheetsub">{t("common.lvAbbr")} {player.level} · {tName(player.weapon.name)}{player.weapon.twoHanded ? " " + t("common.twoHandTag") : ""} · def {player.defense ?? 0}</div>
           </div>
           <div className="goldbox">◈ {gold} · ⚗ {potions}</div>
         </div>
@@ -38,7 +38,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
       <div className="bag">
         <div className="bagline"><span className="bagicon">⚗</span> {t("hub.potions")} <b>{potions}</b></div>
         <div className="bagline"><span className="bagicon">◈</span> {t("common.gold")} <b>{gold}</b></div>
-        <div className="bagline"><span className="bagicon">◈</span> {t("hub.bagLoot")} <b>{equippedGear.length ? equippedGear.map((g) => g.name).join(" · ") : "—"}</b></div>
+        <div className="bagline"><span className="bagicon">◈</span> {t("hub.bagLoot")} <b>{equippedGear.length ? equippedGear.map((g) => tName(g.name)).join(" · ") : "—"}</b></div>
 
         <div className="subtabs">
           <button className={"subtab" + (bagTab === "armas" ? " on" : "")} onClick={() => setBagTab("armas")}>{t("hub.bagWeapons")}</button>
@@ -73,7 +73,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
               <div key={c.id} className="cargadoline">
                 <div className="invinfo">
                   <b>{c.creature.name}</b>
-                  <small>{t("common.lvAbbr")} {c.creature.level} · {tName(c.kindLabel)} · {t("hub.nemCarries", { gold: c.gold, weapon: c.weapon ? t("hub.plusYour", { weapon: c.weapon.name }) : "" })}</small>
+                  <small>{t("common.lvAbbr")} {c.creature.level} · {tName(c.kindLabel)} · {t("hub.nemCarries", { gold: c.gold, weapon: c.weapon ? t("hub.plusYour", { weapon: tName(c.weapon.name) }) : "" })}</small>
                 </div>
               </div>
             ))}

@@ -25,6 +25,7 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "common.twoHandTag": { es: "(2M)", en: "(2H)" },
   "forge.catWeapons": { es: "Armas", en: "Weapons" },
   "forge.catShields": { es: "Escudos", en: "Shields" },
   "forge.catArmor": { es: "Armadura", en: "Armor" },
