@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { t, statAbbr, statLabel, statDesc, tName, abilityName } from "../game/i18n";
 import {
   makeCreature, getHealthForLevel, maxEnergy, energyRegen,
   type Characteristics, type Creature,
@@ -43,15 +44,15 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
     <div className="panel">
       <div className="cap">Nombre</div>
       <input className="tinput" type="text" value={name} maxLength={24}
-        placeholder="¿Cómo te llamas, aventurero?" onChange={(e) => setName(e.target.value)} />
+        placeholder={t("create.namePrompt")} onChange={(e) => setName(e.target.value)} />
 
-      <div className="cap">Reparte tus puntos <span className="soft">(mín 1 · máx 10)</span></div>
-      <p className="statintro">Cada característica cambia cómo juegas. Piensa tu estilo antes de repartir.</p>
+      <div className="cap">Reparte tus puntos <span className="soft">{t("create.minMax")}</span></div>
+      <p className="statintro">{t("create.hint1")}</p>
       {STAT_KEYS.map((k) => (
         <div className="statrow" key={k}>
           <div className="snamewrap">
-            <span className="sname">{STAT_ES[k]}</span>
-            <span className="sdesc">{STAT_DESC[k]}</span>
+            <span className="sname">{statLabel(k)}</span>
+            <span className="sdesc">{statDesc(k)}</span>
           </div>
           <button className="step" disabled={stats[k] <= STAT_MIN} onClick={() => bump(k, -1)}>−</button>
           <b className="sval">{stats[k]}</b>
@@ -61,8 +62,8 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
       <div className="rem">Puntos restantes: <b>{remaining}</b></div>
 
       <div className="derived">
-        <div className="dcard"><div className="big">{getHealthForLevel(stats.vitality, 1)}</div><div className="lbl">vida máx</div></div>
-        <div className="dcard"><div className="big">{maxEnergy(stats.strength, 1)}</div><div className="lbl">energía</div></div>
+        <div className="dcard"><div className="big">{getHealthForLevel(stats.vitality, 1)}</div><div className="lbl">{t("common.maxHp")}</div></div>
+        <div className="dcard"><div className="big">{maxEnergy(stats.strength, 1)}</div><div className="lbl">{t("common.energyLbl")}</div></div>
         <div className="dcard"><div className="big">{energyRegen(stats.strength, 1)}</div><div className="lbl">regen ⚡</div></div>
       </div>
 
@@ -71,13 +72,13 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
         {STARTER_WEAPONS.map((w) => {
           const ok = reqMet(w.req, stats);
           const sel = effectiveWeapon.id === w.id;
-          const reqTxt = Object.entries(w.req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}`).join(" · ");
+          const reqTxt = Object.entries(w.req ?? {}).map(([k, v]) => `${statAbbr(k).toLowerCase()} ${v}`).join(" · ");
           return (
             <button key={w.id} disabled={!ok}
               className={"opt" + (sel ? " sel" : "") + (ok ? "" : " locked")}
               onClick={() => setWeaponId(w.id)}>
-              <b>{w.name}<span className="soft"> · {w.twoHanded ? "2 manos" : "1 mano"}</span></b>
-              <small>{(w.abilities ?? []).map((id) => { const a = getAbility(id); return a ? `${a.name} ${a.energyCost}⚡` : id; }).join(" · ")}</small>
+              <b>{tName(w.name)}<span className="soft"> · {w.twoHanded ? t("common.twoHands") : t("common.oneHand")}</span></b>
+              <small>{(w.abilities ?? []).map((id) => { const a = getAbility(id); return a ? `${abilityName(a.id)} ${a.energyCost}⚡` : id; }).join(" · ")}</small>
               <small className="req">{ok ? w.note : "req: " + reqTxt}</small>
             </button>
           );
@@ -85,7 +86,7 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
       </div>
 
       <button className="begin" disabled={!canStart} onClick={start}>Entrar a la cripta</button>
-      <p className="foot">Los stats derivados salen en vivo de las fórmulas del motor. Arrancas sin armadura: la protección es botín de la cripta.</p>
+      <p className="foot">{t("create.hint2")}</p>
     </div>
   );
 }

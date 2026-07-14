@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
+import { t, tName, abilityName, abilityDesc } from "../game/i18n";
 import {
   resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics, hitChanceTuned,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
@@ -19,7 +20,7 @@ interface Battle {
   shakePlayer: boolean; flashPlayer: boolean;
   shake: boolean[]; flash: boolean[];
 }
-const KIND_ES: Record<string, string> = { undead: "no-muerto", rodent: "alimaña", beast: "bestia" };
+const KIND_ES: Record<string, string> = { undead: t("kind.undead"), rodent: t("kind.rodent"), beast: t("kind.beast") };
 const avgDice = (spec: string): number => { const m = /^(\d+)d(\d+)$/.exec((spec ?? "").trim()); return m ? +m[1] * (+m[2] + 1) / 2 : 0; };
 const pillClass = (m: Modifier) => m.kind === "skip" ? "stun" : m.kind === "stat" ? "debuff" : "dot";
 const movesOf = (c: Creature): AbilitySpec[] => {
@@ -52,8 +53,8 @@ export function Combat({ player, enemies, potions, onEnd }: {
       phase: "player", log: [], floats: [],
       shakePlayer: false, flashPlayer: false, shake: es.map(() => false), flash: es.map(() => false),
     };
-    const names = es.map((e) => e.name).join(", ");
-    b.current.log.push({ text: es.length > 1 ? `Te rodean ${es.length}: ${names}.` : `Aparece ${names}.`, color: "var(--dim)" });
+    const names = es.map((e) => tName(e.name)).join(", ");
+    b.current.log.push({ text: es.length > 1 ? t("combat.surround", { n: es.length, names }) : t("combat.appears", { names }), color: "var(--dim)" });
   }
 
   const pushLog = (text: string, color: string) => { const l = b.current.log; l.push({ text, color }); if (l.length > 7) l.shift(); };
@@ -73,7 +74,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     for (const m of c.modifiers ?? []) {
       if (m.kind !== "dot") continue;
       const dmg = m.dotSpec ? diceroll(m.dotSpec) : (m.dmg ?? 0);
-      if (dmg > 0) { c.hp = Math.max(0, c.hp - dmg); spawnFloat(who, "-" + dmg, "#e8635a"); doShake(who); pushLog(`${c.name} sufre ${m.label} — ${dmg}.`, "var(--danger)"); }
+      if (dmg > 0) { c.hp = Math.max(0, c.hp - dmg); spawnFloat(who, "-" + dmg, "#e8635a"); doShake(who); pushLog(t("combat.log.suffer", { name: tName(c.name), effect: tName(m.label), dmg }), "var(--danger)"); }
     }
   };
   const allDead = () => b.current.enemies.every(isDead);
@@ -89,13 +90,13 @@ export function Combat({ player, enemies, potions, onEnd }: {
     s.player.energy -= ab.energyCost;
     const tgt = s.enemies[ti];
     const r = resolveAbility(ab, s.player, tgt, DEFAULT_TUNE);
-    if (!r.hit) { pushLog(`${s.player.name} usa ${ab.name} (${r.chance}%) pero falla.`, "var(--muted)"); force(); return; }
+    if (!r.hit) { pushLog(t("combat.log.miss", { name: s.player.name, ability: abilityName(ab.id), chance: r.chance }), "var(--muted)"); force(); return; }
     const dealt = mitigate(r.damage, tgt.defense ?? 0);
     tgt.hp = Math.max(0, tgt.hp - dealt);
     doShake(ti); spawnFloat(ti, "-" + dealt, "#e8635a");
-    pushLog(`${s.player.name} usa ${ab.name} (${r.chance}%) — ${dealt} a ${tgt.name}.`, "var(--accent)");
-    if (r.modifiers.length && tgt.hp > 0) { tgt.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! (${r.effect!.chance}%) sobre ${tgt.name}.`, "var(--warn)"); }
-    if (isDead(tgt)) { pushLog(`¡${tgt.name} derrotado!`, "var(--success)"); if (allDead()) return endGame(true); s.target = firstAlive(); }
+    pushLog(t("combat.log.playerHit", { name: s.player.name, ability: abilityName(ab.id), chance: r.chance, dmg: dealt, target: tName(tgt.name) }), "var(--accent)");
+    if (r.modifiers.length && tgt.hp > 0) { tgt.modifiers.push(...r.modifiers); pushLog(t("combat.log.effectOn", { effect: tName(r.effect!.label), chance: r.effect!.chance, target: tName(tgt.name) }), "var(--warn)"); }
+    if (isDead(tgt)) { pushLog(t("combat.log.defeated", { name: tName(tgt.name) }), "var(--success)"); if (allDead()) return endGame(true); s.target = firstAlive(); }
     force();
   }
   function usePotion() {
@@ -104,7 +105,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     s.potions -= 1; s.player.energy -= POTION_COST;
     const heal = Math.round(s.player.maxHp * POTION_HEAL_FRACTION);
     s.player.hp = Math.min(s.player.maxHp, s.player.hp + heal);
-    spawnFloat("player", "+" + heal, "#7fae5a"); pushLog(`${s.player.name} bebe una poción — +${heal} de vida.`, "var(--success)");
+    spawnFloat("player", "+" + heal, "#7fae5a"); pushLog(t("combat.log.potion", { name: s.player.name, heal }), "var(--success)");
     force();
   }
   function endTurn() { const s = b.current; if (s.phase !== "player") return; ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 400); }
@@ -127,7 +128,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
       if (allDead()) { force(); return endGame(true); }
       if (isDead(s.player)) { force(); return endGame(false); }
       s.skip = new Set();
-      s.enemies.forEach((e, i) => { if (!isDead(e) && consumeSkip(e)) { s.skip.add(i); pushLog(`${e.name} aturdido, pierde su acción.`, "var(--warn)"); } });
+      s.enemies.forEach((e, i) => { if (!isDead(e) && consumeSkip(e)) { s.skip.add(i); pushLog(t("combat.log.stunnedAction", { name: tName(e.name) }), "var(--warn)"); } });
       s.turnPtr = 0; s.guard = 0;
       force(); setTimeout(stepGroup, 500);
     } catch (e) { recoverToPlayer("enemyTurn", e); }
@@ -155,7 +156,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     const chains = isNem && !!bestAffordable(e, e.energy);   // ¿le queda energía para otro golpe?
     const doneNow = () => { s.skip.add(actor); s.turnPtr = (actor + 1) % n; };
     if (!r.hit) {
-      pushLog(`${e.name} usa ${ability.name} (${r.chance}%) pero falla.`, "var(--muted)");
+      pushLog(t("combat.log.miss", { name: tName(e.name), ability: abilityName(ability.id), chance: r.chance }), "var(--muted)");
       if (!chains) doneNow();
       force(); setTimeout(stepGroup, chains ? 480 : 650); return;
     }
@@ -163,8 +164,8 @@ export function Combat({ player, enemies, potions, onEnd }: {
     s.player.hp = Math.max(0, s.player.hp - dealt);
     doShake("player"); spawnFloat("player", "-" + dealt, "#e8635a");
     const neg = r.damage - dealt;
-    pushLog(`${e.name} usa ${ability.name} (${r.chance}%) — ${dealt}${neg > 0 ? ` (−${neg} por defensa)` : ""}.`, "var(--danger)");
-    if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! sobre ${s.player.name}.`, "var(--warn)"); }
+    pushLog(t("combat.log.enemyHit", { name: tName(e.name), ability: abilityName(ability.id), chance: r.chance, dmg: dealt, def: neg > 0 ? t("combat.log.byDefense", { n: neg }) : "" }), "var(--danger)");
+    if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(t("combat.log.effectOnPlayer", { effect: tName(r.effect!.label), name: s.player.name }), "var(--warn)"); }
     if (isDead(s.player)) { force(); return endGame(false); }
     const keepChaining = chains && s.player.hp > 0;
     if (!keepChaining) doneNow();   // si encadena, NO se marca skip: la próxima iteración lo vuelve a elegir
@@ -185,21 +186,21 @@ export function Combat({ player, enemies, potions, onEnd }: {
     regenEnergy(s.player);
     tickDots(s.player, "player");
     if (isDead(s.player)) { force(); return endGame(false); }
-    if (consumeSkip(s.player)) { pushLog(`${s.player.name} aturdido, pierde el turno.`, "var(--warn)"); ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 800); return; }
+    if (consumeSkip(s.player)) { pushLog(t("combat.log.stunnedTurn", { name: s.player.name }), "var(--warn)"); ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 800); return; }
     if (isDead(s.enemies[s.target])) s.target = firstAlive();
     if (!playerCanAct()) {
-      pushLog(`${s.player.name} no tiene energía para actuar.`, "var(--muted)");
+      pushLog(t("combat.log.noEnergy", { name: s.player.name }), "var(--muted)");
       ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900); return;
     }
     s.phase = "player"; force();
    } catch (e) { recoverToPlayer("startPlayerTurn", e); }
   }
-  function endGame(win: boolean) { b.current.phase = "over"; pushLog(win ? "¡Grupo derrotado!" : `${b.current.player.name} cae…`, win ? "var(--success)" : "var(--danger)"); force(); }
+  function endGame(win: boolean) { b.current.phase = "over"; pushLog(win ? t("combat.groupDefeated") : t("combat.playerFalls", { name: b.current.player.name }), win ? "var(--success)" : "var(--danger)"); force(); }
 
   useEffect(() => {
     const s = b.current;
     if (s.phase === "player" && !playerCanAct()) {
-      pushLog(`${s.player.name} no tiene energía para actuar.`, "var(--muted)");
+      pushLog(t("combat.log.noEnergy", { name: s.player.name }), "var(--muted)");
       ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +224,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
               {s.flash[i] && <div className="flashfx" />}
               {fl && <div className="dmg" key={fl.id} style={{ color: fl.color }}>{fl.text}</div>}
               <EnemySprite enemy={e} dead={dead} />
-              <div className="nm">{e.name}</div>
+              <div className="nm">{tName(e.name)}</div>
               <div className="mt">Nv {e.level} · {KIND_ES[enemyKind(e)]}</div>
               <div className="bar"><div style={{ width: Math.max(0, e.hp / e.maxHp * 100) + "%", background: "var(--hp)" }} /></div>
               <div className="hpt">{Math.max(0, Math.round(e.hp))} / {e.maxHp}</div>
@@ -238,7 +239,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
         {playerFloat && <div className="dmg" key={playerFloat.id} style={{ right: 12, left: "auto", color: playerFloat.color }}>{playerFloat.text}</div>}
         <div className="rw"><b>{s.player.name}</b><span>{Math.max(0, Math.round(s.player.hp))} / {s.player.maxHp}</span></div>
         <div className="bar"><div style={{ width: Math.max(0, s.player.hp / s.player.maxHp * 100) + "%", background: s.player.hp / s.player.maxHp < 0.2 ? "var(--danger)" : "var(--php)" }} /></div>
-        <div className="rw" style={{ marginTop: 6 }}><span style={{ fontSize: 11 }}>energía</span><span>{s.player.energy} / {s.player.maxEnergy} ⚡</span></div>
+        <div className="rw" style={{ marginTop: 6 }}><span style={{ fontSize: 11 }}>{t("common.energyLbl")}</span><span>{s.player.energy} / {s.player.maxEnergy} ⚡</span></div>
         <div className="bar" style={{ height: 6 }}><div style={{ width: Math.max(0, s.player.energy / s.player.maxEnergy * 100) + "%", background: "var(--energy)" }} /></div>
         <div className="mods">{s.player.modifiers.map((m, i) => <span key={i} className={"pill " + pillClass(m)}>{m.label} {m.duration}t</span>)}</div>
       </div>
@@ -261,8 +262,8 @@ export function Combat({ player, enemies, potions, onEnd }: {
                 const effPct = ab.effect && tgt ? Math.round(ab.effect.chance(eff, tgt)) : 0;
                 const estHit = Math.round(Math.min(97, Math.max(5, hitChanceTuned(estAcc, estEva) + (ab.accMod ?? 0))));
                 return (
-                  <button key={ab.id} className="primary move" disabled={!canAct || s.player.energy < ab.energyCost} title={ab.desc} onClick={() => useAbilityPlayer(ab)}>
-                    <span className="mvtop">{ab.name} <span className="mvcost">{ab.energyCost}⚡</span></span>
+                  <button key={ab.id} className="primary move" disabled={!canAct || s.player.energy < ab.energyCost} title={abilityDesc(ab.id)} onClick={() => useAbilityPlayer(ab)}>
+                    <span className="mvtop">{abilityName(ab.id)} <span className="mvcost">{ab.energyCost}⚡</span></span>
                     <span className="mvmeta">{estHit}% · ≈{dealt}{ab.effect ? ` · ${ab.effect.label} ${effPct}%` : ""}</span>
                   </button>
                 );
@@ -272,13 +273,13 @@ export function Combat({ player, enemies, potions, onEnd }: {
               const usable = canAct && s.potions > 0 && s.player.hp < s.player.maxHp && s.player.energy >= POTION_COST;
               const lowHp = s.player.maxHp > 0 && s.player.hp / s.player.maxHp < 0.2;
               return (
-                <button className={usable && lowHp ? "blink" : ""} disabled={!canAct || s.potions <= 0 || s.player.hp >= s.player.maxHp || s.player.energy < POTION_COST} onClick={usePotion}>⚗ Poción {POTION_COST}⚡ ({s.potions})</button>
+                <button className={usable && lowHp ? "blink" : ""} disabled={!canAct || s.potions <= 0 || s.player.hp >= s.player.maxHp || s.player.energy < POTION_COST} onClick={usePotion}>⚗ {t("combat.potion")} {POTION_COST}⚡ ({s.potions})</button>
               );
             })()}
-            <button disabled={!canAct} onClick={endTurn}>Terminar turno</button>
+            <button disabled={!canAct} onClick={endTurn}>{t("combat.endTurn")}</button>
           </>
         ) : (
-          <button className="primary" onClick={() => onEnd({ survived: !isDead(s.player), player: s.player, potions: s.potions })}>Continuar</button>
+          <button className="primary" onClick={() => onEnd({ survived: !isDead(s.player), player: s.player, potions: s.potions })}>{t("common.continue")}</button>
         )}
       </div>
     </div>

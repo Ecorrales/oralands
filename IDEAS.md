@@ -112,3 +112,46 @@ Idea: un "modo auto" donde una IA juega el combate y narra su razonamiento en un
   2) LLM (Claude de verdad vía API de artifacts): solo funciona dentro del sandbox de claude.ai (llave inyectada); NO en GitHub Pages (no hay llave, e incrustarla es inseguro/costoso). Sirve como demo, no en producción.
 - Narración en chat: el heurístico ya sabe POR QUÉ eligió (comparó EVs), así que solo hay que verbalizarlo. Opción técnica ("Estocada: 58%×36=20.9 supera Finta 10.1") o con personalidad ("este esqueleto ya tiembla, arriesgo el remate").
 - Útil como: demo llamativa, playtester automático (reporta qué se siente injusto/confuso), y caza-bugs/desbalance corriendo muchas partidas.
+
+## Editor de contenido con contraseña (panel de administración) — GRANDE, a futuro
+Idea de Nox: pantalla de admin protegida con contraseña para agregar/editar TODO el contenido
+(enemigos, calabozos, armas, escudos, armaduras, ítems, recetas, materiales, habilidades…)
+sin tocar código. Que los agregados futuros sean naturales, no en el código.
+
+DECISIONES TOMADAS:
+- Alcance: TODO editable (no empezar con una sola cosa).
+- Dónde vive: en FIREBASE, editable en vivo, sin recompilar.
+- Cuándo: a futuro (después del i18n y el balance actual).
+
+ARQUITECTURA (el corazón NO es el formulario, es mudar contenido de código a datos):
+- Hoy el contenido está hardcodeado: catalog.ts (armas), enemies.ts (TEMPLATES), gear.ts
+  (armaduras/escudos), forge.ts (FORGE_WEAPONS + RECIPES), materials.ts, dungeons.ts, abilities.ts.
+- Migrar cada categoría a una colección/nodo en Firebase (p.ej. content/weapons, content/enemies,
+  content/dungeons, content/recipes, content/materials, content/gear, content/abilities).
+- El juego, al arrancar, CARGA el contenido desde Firebase (con caché local + fallback a un
+  "seed" empaquetado por si Firebase falla o está offline — el PWA debe seguir jugable).
+- Los IDs siguen siendo la clave (weapon.id, enemy.id) para saves/cargados/i18n.
+
+RETOS / RED DE SEGURIDAD (clave para no romper el juego en vivo):
+- Se pierde la validación de TypeScript. El editor DEBE validar al guardar (campos requeridos,
+  tipos de dado "NdM", rangos de stats, req bien formados, referencias válidas a materiales/habilidades).
+  Justo la clase de bug "arrays/objetos vacíos → undefined" que ya sufrimos con Firebase: el editor
+  tiene que impedir guardar contenido mal formado (usar el mismo stripUndefined + validadores).
+- Versionado: los datos en Firebase no tienen historial como Git. Considerar un export/backup
+  (botón "descargar todo el contenido como JSON") y quizá un campo de versión por entrada.
+- Seguridad: "contraseña" en cliente NO es seguridad real. Opciones: (a) gate suave por contraseña
+  local solo para ocultar el panel (suficiente si el riesgo es bajo — es TU juego); (b) real:
+  reglas de Firebase que solo permitan escribir a content/* si el uid es el de Nox (admin allowlist).
+  Recomendado: (b) reglas por uid admin + (a) gate visual. Así nadie más puede escribir aunque encuentre el panel.
+- i18n: el contenido nuevo necesitará nombres ES/EN. El editor debería capturar ambos idiomas
+  (o al menos ES, y marcar EN como pendiente). Encaja con el sistema t()/tName que estamos montando.
+
+FASES SUGERIDAS (cuando le entremos):
+1. Definir esquemas de datos por categoría (lo que ya existe en código, formalizado como shape validable).
+2. Capa de carga: el juego lee contenido desde Firebase con seed/fallback empaquetado + caché offline.
+   (Migrar UNA categoría primero como piloto — p.ej. armas — probar que el juego sigue idéntico.)
+3. Panel admin (gate por uid admin + contraseña visual): CRUD por categoría con validación al guardar.
+4. Migrar el resto de categorías. Export/backup JSON. Captura ES/EN.
+
+NOTA: es proyecto de varias sesiones. El editor en sí (formularios) es lo fácil; lo laborioso y
+delicado es (2) la capa de datos con fallback y (3) la validación que evita romper el juego en vivo.

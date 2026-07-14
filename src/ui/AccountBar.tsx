@@ -1,4 +1,5 @@
 import type { AuthInfo } from "../store";
+import { t } from "../game/i18n";
 
 /** Barra de cuenta: muestra el estado de sesión y permite vincular/entrar con Google.
  *  Solo se renderiza cuando Firebase está conectado. */
@@ -15,12 +16,12 @@ export function AccountBar({ auth, busy, msg, onLink, onSignOut }: {
       {signedIn ? (
         <>
           <span className="acctstate"><span className="acctdot on" /> {auth?.email ?? "cuenta Google"}</span>
-          <button className="small ghost" disabled={busy} onClick={onSignOut}>Cerrar sesión</button>
+          <button className="small ghost" disabled={busy} onClick={onSignOut}>{t("account.signOut")}</button>
         </>
       ) : (
         <>
-          <span className="acctstate"><span className="acctdot" /> Invitado · guardado en la nube</span>
-          <button className="small" disabled={busy} onClick={onLink}>{busy ? "…" : "Entrar con Google"}</button>
+          <span className="acctstate"><span className="acctdot" />{t("account.guest")}</span>
+          <button className="small" disabled={busy} onClick={onLink}>{busy ? "…" : t("account.google")}</button>
         </>
       )}
       {msg && <span className="acctmsg">{msg}</span>}

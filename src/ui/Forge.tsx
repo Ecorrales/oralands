@@ -1,13 +1,14 @@
 import { useState } from "react";
+import { t, statAbbr, tName, abilityName } from "../game/i18n";
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
 import { RECIPES, canForge, type Recipe } from "../game/forge";
 import { STAT_ES } from "../game/catalog";
 import { matName, matIcon, type Mats } from "../game/materials";
 
-const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
+const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? abilityName(a.id) : id; }).join(" · ");
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
-  Object.entries(req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
+  Object.entries(req ?? {}).map(([k, v]) => `${statAbbr(k).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
 
 type ForgeCat = "armas" | "escudos" | "armadura";
 const catOf = (r: Recipe): ForgeCat => r.kind === "weapon" ? "armas" : r.gear?.slot === "offhand" ? "escudos" : "armadura";
@@ -27,10 +28,10 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
     <div className="overlay" onClick={onClose}>
       <div className="shop" onClick={(e) => e.stopPropagation()}>
         <div className="shophead">
-          <div className="cap" style={{ margin: 0 }}>⚒️ Herrería</div>
+          <div className="cap" style={{ margin: 0 }}>{t("forge.title")}</div>
           <div className="goldbox">◈ {gold}</div>
         </div>
-        <p className="foot" style={{ marginTop: 0 }}>Entrega materiales (los juntas al pelear y rebuscar) + oro para forjar equipo que no se compra en ningún lado.</p>
+        <p className="foot" style={{ marginTop: 0 }}>{t("forge.hint")}</p>
 
         <div className="tabs">
           {CATS.map((c) => (
@@ -39,7 +40,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
         </div>
 
         <div className="shopbody">
-          {shown.length === 0 && <div className="forgeempty">Aún no hay recetas de {cat === "escudos" ? "escudos" : cat} — próximamente.</div>}
+          {shown.length === 0 && <div className="forgeempty">{t("forge.noRecipes")}</div>}
           {shown.map((r) => {
             const chk = canForge(r, gold, materials, player.characteristics);
             const out = r.kind === "weapon" ? r.weapon! : r.gear!;
@@ -49,17 +50,17 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
               <div className="forgeitem" key={r.id}>
                 <div className="forgehead">
                   <div>
-                    <b>{out.name}</b>
+                    <b>{tName(out.name)}</b>
                     {r.kind === "weapon"
-                      ? <small>daño {r.weapon!.damage} · {moveText(r.weapon!.abilities)}</small>
+                      ? <small>{t("common.damageLbl")}{r.weapon!.damage} · {moveText(r.weapon!.abilities)}</small>
                       : <small>defensa +{r.gear!.defense} · {r.gear!.note}</small>}
                     {!reqOk && <small className="reqline">requiere {reqText(reqObj, player.characteristics)}</small>}
                   </div>
                   {confirmId === r.id
                     ? (
                       <div className="confirmrow">
-                        <span className="confirmq">¿Forjar?</span>
-                        <button className="small" onClick={() => { onForge(r); setConfirmId(null); }}>Sí</button>
+                        <span className="confirmq">{t("forge.confirm")}</span>
+                        <button className="small" onClick={() => { onForge(r); setConfirmId(null); }}>{t("common.yes")}</button>
                         <button className="small ghost" onClick={() => setConfirmId(null)}>No</button>
                       </div>
                     )

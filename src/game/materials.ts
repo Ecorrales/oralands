@@ -1,4 +1,5 @@
 // Materiales: escombros de batalla (madera, acero, roca) + partes de monstruo
+import { tName } from "./i18n";
 // (hueso, colmillo, garra, pelaje). Se recolectan al despejar salas y al rebuscar,
 // y alimentan la forja (en vez de entregar armas).
 
@@ -14,7 +15,7 @@ export const MATERIALS: Material[] = [
   { id: "hide",  name: "Pelaje",   icon: "🧶" },
 ];
 const byId = new Map(MATERIALS.map((m) => [m.id, m]));
-export const matName = (id: string): string => byId.get(id)?.name ?? id;
+export const matName = (id: string): string => tName(byId.get(id)?.name ?? id);
 export const matIcon = (id: string): string => byId.get(id)?.icon ?? "▪";
 
 // Precio de venta por unidad: escombros baratos, partes de monstruo algo más.
@@ -33,7 +34,7 @@ const MAT_SOURCE: Record<string, string> = {
   claw: "bestias y alimañas",
   hide: "alimañas y bestias (ratas, lobos)",
 };
-export const matSource = (id: string): string => MAT_SOURCE[id] ?? "";
+export const matSource = (id: string): string => tName(MAT_SOURCE[id] ?? "");
 
 export type Mats = Record<string, number>;
 export function mergeMats(into: Mats, add: Mats): Mats {

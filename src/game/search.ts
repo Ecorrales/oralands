@@ -15,6 +15,7 @@ export const searchGold = (depth: number): number =>
   2 + Math.floor(2 * Math.sqrt(depth)) + Math.floor(Math.random() * 3);
 
 import type { Biome } from "./dungeons";
+import { tName } from "./i18n";
 export function biomeOf(enemies: Creature[]): Biome {
   const k = enemies.length ? enemyKind(enemies[0]) : "cueva" as const;
   return k === "undead" ? "cripta" : k === "rodent" ? "madriguera" : "cueva";
@@ -43,6 +44,6 @@ const TEXTS: Record<Biome, { intro: string; empty: string; found: string }> = {
   },
 };
 
-export const searchIntro = (b: Biome): string => TEXTS[b].intro;
+export const searchIntro = (b: Biome): string => tName(TEXTS[b].intro);
 export const searchOutcome = (b: Biome, found: boolean): string =>
-  TEXTS[b].intro + (found ? TEXTS[b].found : TEXTS[b].empty);
+  tName(TEXTS[b].intro) + (found ? tName(TEXTS[b].found) : tName(TEXTS[b].empty));

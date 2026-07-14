@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { t, statAbbr } from "../game/i18n";
 import type { Creature } from "../engine";
 import { STAT_KEYS, STAT_ES, type WeaponOpt } from "../game/catalog";
 import type { GearItem } from "../game/gear";
@@ -26,7 +27,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         </div>
         <div className="statgrid">
           {STAT_KEYS.map((k) => (
-            <div className="sg" key={k}><span>{STAT_ES[k].slice(0, 3)}</span><b>{player.characteristics[k]}</b></div>
+            <div className="sg" key={k}><span>{statAbbr(k)}</span><b>{player.characteristics[k]}</b></div>
           ))}
           <div className="sg"><span>VID</span><b>{player.maxHp}</b></div>
           <div className="sg"><span>ENE</span><b>{player.maxEnergy}</b></div>
@@ -40,14 +41,14 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         <div className="bagline"><span className="bagicon">◈</span> Equipo <b>{equippedGear.length ? equippedGear.map((g) => g.name).join(" · ") : "—"}</b></div>
 
         <div className="subtabs">
-          <button className={"subtab" + (bagTab === "armas" ? " on" : "")} onClick={() => setBagTab("armas")}>Armas</button>
-          <button className={"subtab" + (bagTab === "materiales" ? " on" : "")} onClick={() => setBagTab("materiales")}>Materiales{ownedMats.length ? ` (${ownedMats.length})` : ""}</button>
+          <button className={"subtab" + (bagTab === "armas" ? " on" : "")} onClick={() => setBagTab("armas")}>{t("hub.bagWeapons")}</button>
+          <button className={"subtab" + (bagTab === "materiales" ? " on" : "")} onClick={() => setBagTab("materiales")}>{t("hub.bagMaterials")}{ownedMats.length ? ` (${ownedMats.length})` : ""}</button>
         </div>
 
         {bagTab === "armas"
           ? <InventoryInline player={player} inventory={inventory} onEquip={onEquip} />
           : ownedMats.length === 0
-            ? <div className="matempty">Aún no tienes materiales. Los juntas al pelear y rebuscar salas.</div>
+            ? <div className="matempty">{t("hub.noMats")}</div>
             : (
               <div className="matgrid">
                 {ownedMats.map((m) => (
@@ -66,7 +67,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
 
       {cargados.length > 0 && (
         <>
-          <div className="cap">☠ Némesis acechando <span className="tag">{cargados.length}</span></div>
+          <div className="cap">{t("hub.nemesisStalking")} <span className="tag">{cargados.length}</span></div>
           <div className="bag">
             {cargados.map((c) => (
               <div key={c.id} className="cargadoline">
@@ -76,25 +77,25 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
                 </div>
               </div>
             ))}
-            <p className="foot" style={{ marginBottom: 0 }}>Te esperan en la cripta. Véncelos para recuperar lo que te robaron.</p>
+            <p className="foot" style={{ marginBottom: 0 }}>{t("hub.nemesisHint")}</p>
           </div>
         </>
       )}
 
       <div className="actions" style={{ marginTop: 14 }}>
-        <button className="primary" onClick={onFight}>Entrar al calabozo</button>
-        <button onClick={onOpenEquip}>Equipo</button>
-        <button onClick={onOpenShop}>Tienda</button>
-        <button onClick={onOpenForge}>Herrería</button>
+        <button className="primary" onClick={onFight}>{t("hub.enter")}</button>
+        <button onClick={onOpenEquip}>{t("hub.equip")}</button>
+        <button onClick={onOpenShop}>{t("hub.shop")}</button>
+        <button onClick={onOpenForge}>{t("hub.forge")}</button>
         {confirmNew
           ? (
             <div className="confirmrow">
-              <span className="confirmq">¿Borrar a {player.name} y empezar de cero?</span>
-              <button className="small danger" onClick={onNew}>Sí, borrar</button>
-              <button className="small ghost" onClick={() => setConfirmNew(false)}>No</button>
+              <span className="confirmq">{t("hub.confirmNew", { name: player.name })}</span>
+              <button className="small danger" onClick={onNew}>{t("hub.yesDelete")}</button>
+              <button className="small ghost" onClick={() => setConfirmNew(false)}>{t("hub.no")}</button>
             </div>
           )
-          : <button onClick={() => setConfirmNew(true)}>Nuevo personaje</button>}
+          : <button onClick={() => setConfirmNew(true)}>{t("hub.newChar")}</button>}
       </div>
     </div>
   );

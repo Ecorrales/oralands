@@ -1,4 +1,5 @@
 import type { Creature } from "../engine";
+import { t, slotLabel, tName } from "../game/i18n";
 import { effectiveCharacteristics } from "../engine";
 import { SLOT_ES, SLOT_ROWS, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
 
@@ -31,8 +32,8 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
     if (slot === "mainhand") {
       return (
         <div className="eqcell filled" key={slot}>
-          <div className="eqslot">{SLOT_ES[slot]}</div>
-          <div className="eqname">{player.weapon.name}{player.weapon.twoHanded ? " (2M)" : ""}</div>
+          <div className="eqslot">{slotLabel(slot)}</div>
+          <div className="eqname">{tName(player.weapon.name)}{player.weapon.twoHanded ? " (2M)" : ""}</div>
           <div className="eqhint">se cambia en la mochila</div>
         </div>
       );
@@ -41,8 +42,8 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
     const fillable = slot === "offhand" || slot === "chest";
     return (
       <div className={"eqcell" + (it ? " filled" : "") + (fillable ? "" : " soon")} key={slot}>
-        <div className="eqslot">{SLOT_ES[slot]}</div>
-        <div className="eqname">{it ? it.name : fillable ? "vacío" : "—"}</div>
+        <div className="eqslot">{slotLabel(slot)}</div>
+        <div className="eqname">{it ? it.name : fillable ? t("common.empty") : "—"}</div>
         {it && <div className="eqhint">def +{it.defense ?? 0}{it.evasion ? ` · ev ${it.evasion > 0 ? "+" : ""}${it.evasion}` : ""}</div>}
         {!it && !fillable && <div className="eqhint">pronto</div>}
       </div>
@@ -56,9 +57,9 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
     <div className="overlay" onClick={onClose}>
       <div className="statspanel wide" onClick={(e) => e.stopPropagation()}>
         <div className="cap">Equipo · {player.name}</div>
-        <div className="eqsummary">Daño <b>{dmgMin}–{dmgMax}</b> · Precisión ≈ <b>{accEst}</b></div>
-        <div className="eqsummary">Defensa <b>{player.defense ?? 0}</b> · Evasión <b>{(player.evasionBonus ?? 0) >= 0 ? "+" : ""}{player.evasionBonus ?? 0}</b></div>
-        <div className="eqhelp">Rango de un golpe base (arma × fuerza). El daño real varía por habilidad, dados y la defensa del enemigo.</div>
+        <div className="eqsummary">{t("equip.damage")}<b>{dmgMin}–{dmgMax}</b>{t("equip.accuracy")}<b>{accEst}</b></div>
+        <div className="eqsummary">{t("equip.defense")}<b>{player.defense ?? 0}</b>{t("equip.evasion")}<b>{(player.evasionBonus ?? 0) >= 0 ? "+" : ""}{player.evasionBonus ?? 0}</b></div>
+        <div className="eqhelp">{t("equip.rangeHint")}</div>
 
         <div className="eqgrid">
           {SLOT_ROWS.map((row, i) => (
@@ -67,7 +68,7 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
         </div>
 
         <div className="cap" style={{ marginTop: 16 }}>Tu equipo</div>
-        {owned.length === 0 && <p className="foot">No tienes escudos ni armaduras. Cómpralos en la tienda o fórjalos.</p>}
+        {owned.length === 0 && <p className="foot">{t("equip.noGear")}</p>}
         {owned.map((g) => {
           const on = equipped[g.slot] === g.id;
           const ok = reqMetGear(g, player.characteristics);
@@ -75,9 +76,9 @@ export function EquipPanel({ player, gear, equipped, onEquip, onUnequip, onClose
           return (
             <div className={"invitem" + (on ? " eq" : "")} key={g.id}>
               <div className="invinfo">
-                <b>{g.name} <span className="soft">({SLOT_ES[g.slot].toLowerCase()})</span></b>
+                <b>{tName(g.name)} <span className="soft">({slotLabel(g.slot).toLowerCase()})</span></b>
                 <small>defensa +{g.defense ?? 0}{g.evasion ? ` · evasión ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""}{g.note ? ` · ${g.note}` : ""}</small>
-                {twoHandBlock && <small className="reqline">requiere una mano libre (arma a 2 manos)</small>}
+                {twoHandBlock && <small className="reqline">{t("equip.needFreeHand")}</small>}
                 {!ok && <small className="reqline">no cumples requisitos</small>}
               </div>
               {on ? <button className="small ghost" onClick={() => onUnequip(g.slot)}>Quitar</button>

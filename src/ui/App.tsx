@@ -6,6 +6,7 @@ import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type Equ
 import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
 import { AccountBar } from "./AccountBar";
+import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
 import { StatusBar } from "./StatusBar";
@@ -92,6 +93,8 @@ export function App() {
   const [auth, setAuth] = useState<AuthInfo | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMsg, setAuthMsg] = useState<string | null>(null);
+  const [lang, setLangState] = useState<Lang>(getLang());
+  const toggleLang = () => { const nl: Lang = getLang() === "es" ? "en" : "es"; setLang(nl); setLangState(nl); };
 
   // Arranque: PRIMERO resolvemos la identidad (invitado vs Google), LUEGO cargamos
   // los datos de esa cuenta. Así nunca cargamos algo local para cambiarlo después
@@ -116,13 +119,13 @@ export function App() {
       else setAuthMsg(`Cuenta vinculada con ${res.email ?? "Google"}.`);
     } catch (e) {
       const code = (e as { code?: string }).code ?? "";
-      if (!code.includes("popup-closed") && !code.includes("cancelled-popup")) setAuthMsg("No se pudo iniciar sesión con Google.");
+      if (!code.includes("popup-closed") && !code.includes("cancelled-popup")) setAuthMsg(t("auth.googleFail"));
     } finally { setAuthBusy(false); }
   }
   async function signOutGoogle() {
     if (!firebaseConfigured) return;
     setAuthBusy(true); setAuthMsg(null);
-    try { await (store as FirebaseStore).signOutUser(); loadFromStore(); setAuthMsg("Sesión cerrada."); }
+    try { await (store as FirebaseStore).signOutUser(); loadFromStore(); setAuthMsg(t("auth.signedOut")); }
     finally { setAuthBusy(false); }
   }
 
@@ -303,6 +306,7 @@ export function App() {
 
   return (
     <div className="stage">
+      <button className="langtoggle" onClick={toggleLang} title="Language / Idioma">{lang === "es" ? "EN" : "ES"}</button>
       {(screen === "loading" || screen === "create") && <h1 className="title">Dungeon</h1>}
       {player && screen === "hub" && (
         <StatusBar level={player.level} xp={xp} points={points} onOpenStats={() => setShowStats(true)} />

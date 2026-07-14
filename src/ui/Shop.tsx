@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { statAbbr, slotLabel, tName, abilityName, t } from "../game/i18n";
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
 import {
@@ -9,13 +10,13 @@ import { SHIELDS, SHOP_ARMOR, SLOT_ES, gearSellValue, reqMetGear, type GearItem,
 import { MATERIALS, matIcon, matName, matSell, type Mats } from "../game/materials";
 
 const reqText = (req: Partial<Record<string, number>>, ch: Creature["characteristics"]) =>
-  Object.entries(req ?? {}).map(([k, v]) => `${STAT_ES[k].slice(0, 3).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
-const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? a.name : id; }).join(" · ");
+  Object.entries(req ?? {}).map(([k, v]) => `${statAbbr(k).toLowerCase()} ${v}${ch[k as keyof typeof ch] < (v as number) ? " ✗" : ""}`).join(" · ");
+const moveText = (ids: string[]) => ids.map((id) => { const a = getAbility(id); return a ? abilityName(a.id) : id; }).join(" · ");
 
 type SellCat = "general" | "armas" | "equipo" | "materiales";
 const SELL_CATS: { id: SellCat; label: string }[] = [
-  { id: "general", label: "General" }, { id: "armas", label: "Armas" },
-  { id: "equipo", label: "Equipo" }, { id: "materiales", label: "Materiales" },
+  { id: "general", label: "shop.tabGeneral" }, { id: "armas", label: "shop.tabWeapons" },
+  { id: "equipo", label: "shop.tabGear" }, { id: "materiales", label: "shop.tabMaterials" },
 ];
 
 export function Shop({ player, gold, potions, inventory, equipped, gear, materials, onBuyPotion, onBuyWeapon, onBuyGear, onSell, onSellAll, onSellGear, onSellMaterial, onSellAllMaterials, onClose }: {
@@ -37,10 +38,10 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
     return (
       <div className={"shopitem" + (on ? " eq" : "")} key={g.id}>
         <div className="invinfo">
-          <b>{g.name}{on && <span className="eqtag"> puesto</span>}</b>
+          <b>{tName(g.name)}{on && <span className="eqtag"> {t("common.worn")}</span>}</b>
           <small>defensa +{g.defense ?? 0}{g.evasion ? ` · evasión ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""}{g.abilities ? ` · da ${moveText(g.abilities)}` : ""}</small>
           {!ok && <small className="reqline">requiere {reqText(g.req, player.characteristics)}</small>}
-          {twoHandBlock && <small className="reqline">tienes un arma a dos manos</small>}
+          {twoHandBlock && <small className="reqline">{t("shop.haveTwoHand")}</small>}
         </div>
         {on ? <span className="eqmark">✓</span>
           : <button className="small" disabled={gold < g.price || !ok || twoHandBlock} onClick={() => onBuyGear(g)}>◈ {g.price}</button>}
@@ -56,8 +57,8 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
           <div className="goldbox">◈ {gold}</div>
         </div>
         <div className="tabs">
-          <button className={"tab" + (tab === "buy" ? " on" : "")} onClick={() => setTab("buy")}>Comprar</button>
-          <button className={"tab" + (tab === "sell" ? " on" : "")} onClick={() => setTab("sell")}>Vender</button>
+          <button className={"tab" + (tab === "buy" ? " on" : "")} onClick={() => setTab("buy")}>{t("shop.buy")}</button>
+          <button className={"tab" + (tab === "sell" ? " on" : "")} onClick={() => setTab("sell")}>{t("shop.sell")}</button>
         </div>
 
         <div className="shopbody">
@@ -69,13 +70,13 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
                 <button className="small" disabled={gold < POTION_PRICE} onClick={onBuyPotion}>◈ {POTION_PRICE}</button>
               </div>
 
-              <div className="baghead">Armas</div>
+              <div className="baghead">{t("shop.tabWeapons")}</div>
               {SHOP_WEAPONS.map((w) => {
                 const ok = reqMet(w.req, player.characteristics);
                 return (
                   <div className="shopitem" key={w.id}>
                     <div className="invinfo">
-                      <b>{w.name}<span className="soft"> · {w.twoHanded ? "2 manos" : "1 mano"}</span></b>
+                      <b>{tName(w.name)}<span className="soft"> · {w.twoHanded ? t("common.twoHands") : t("common.oneHand")}</span></b>
                       <small>daño {w.damage} · {moveText(w.abilities)}</small>
                       {!ok && <small className="reqline">requiere {reqText(w.req, player.characteristics)}</small>}
                     </div>
@@ -89,13 +90,13 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
 
               <div className="baghead">Armaduras (pecho)</div>
               {SHOP_ARMOR.map(gearRow)}
-              <p className="foot">Lo pesado y lo fino se consigue por forja, misión o botín.</p>
+              <p className="foot">{t("shop.hardFineHint")}</p>
             </>
           ) : (
             <>
               <div className="subtabs">
                 {SELL_CATS.map((c) => (
-                  <button key={c.id} className={"subtab" + (sellCat === c.id ? " on" : "")} onClick={() => setSellCat(c.id)}>{c.label}</button>
+                  <button key={c.id} className={"subtab" + (sellCat === c.id ? " on" : "")} onClick={() => setSellCat(c.id)}>{t(c.label)}</button>
                 ))}
               </div>
 
@@ -112,7 +113,7 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
                     return (
                       <div className="shopitem" key={w.id}>
                         <div className="invinfo">
-                          <b>{w.name} <span className="qty">×{qty}</span>{equippedW && <span className="eqtag"> equipada</span>}</b>
+                          <b>{tName(w.name)} <span className="qty">×{qty}</span>{equippedW && <span className="eqtag"> {t("shop.equippedTag")}</span>}</b>
                           <small>vende por ◈ {sellValue(w)} c/u{equippedW ? " · conservas la equipada" : ""}</small>
                         </div>
                         <button className="small" disabled={sellable <= 0} onClick={() => onSell(w.id)}>Vender ◈{sellValue(w)}</button>
@@ -131,8 +132,8 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
                     return (
                       <div className="shopitem" key={g.id}>
                         <div className="invinfo">
-                          <b>{g.name}{on && <span className="eqtag"> puesto</span>}</b>
-                          <small>{SLOT_ES[g.slot].toLowerCase()} · def +{g.defense ?? 0}{g.evasion ? ` · ev ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""} · {on ? "quítatelo en Equipo para venderlo" : `vende por ◈ ${gearSellValue(g)}`}</small>
+                          <b>{tName(g.name)}{on && <span className="eqtag"> {t("common.worn")}</span>}</b>
+                          <small>{slotLabel(g.slot).toLowerCase()} · def +{g.defense ?? 0}{g.evasion ? ` · ev ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""} · {on ? t("shop.unequipToSell") : `vende por ◈ ${gearSellValue(g)}`}</small>
                         </div>
                         {on
                           ? <span className="lockmini">puesto</span>
