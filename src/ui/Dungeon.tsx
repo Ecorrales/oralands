@@ -3,11 +3,12 @@ import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
 import { pickDungeon, dungeonById } from "../game/dungeons";
+import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
 import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
-import { graduateCargado, pickStolenIndex, type Cargado } from "../game/cargados";
+import { graduateCargado, levelUpCargado, pickStolenIndex, type Cargado } from "../game/cargados";
 import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, searchOutcome, searchIntro } from "../game/search";
 import type { RunState } from "../store/PlayerStore";
 import { Combat } from "./Combat";
@@ -22,6 +23,7 @@ export interface RunResult {
   player: Creature; outcome: "won" | "dead"; runGold: number; potions: number;
   inventory: WeaponOpt[]; xp: number; points: number;
   newCargado: Cargado | null; defeatedCargados: string[]; recoveredWeapons: WeaponOpt[];
+  leveledCargado: Cargado | null;   // némesis que te ganó de nuevo y subió de nivel
   materials: Mats;
 }
 
@@ -71,6 +73,9 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
            : (cargados.length ? cargados[Math.floor(Math.random() * cargados.length)] : null)
   );
   const newCargado = useRef<Cargado | null>(null);
+  const leveledCargado = useRef<Cargado | null>(null);
+  const roomTrap = useRef<Trap | null>(null);
+  const [trapMsg, setTrapMsg] = useState<string | null>(null);
   const defeated = useRef<string[]>(resume?.defeated ? [...resume.defeated] : []);
   const recovered = useRef<WeaponOpt[]>(resume?.recovered ? [...resume.recovered] : []);
   const searchStart = useRef(0);
@@ -139,7 +144,9 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           runMats.current = mergeMats(runMats.current, mats);
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
-        setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
+        let trapNote = "";
+        if (roomTrap.current) { trapNote = ` ⚠ Detectas una trampa — ${roomTrap.current.detect}`; roomTrap.current = null; }
+        setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra + trapNote);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
       force();
@@ -173,8 +180,11 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       setLevelUp(`¡Nivel ${to}! +${res.leveled.length * POINTS_PER_LEVEL} puntos — repártelos en el campamento.`);
     }
   }
-  function onDeath(killers: Creature[], cargadoFight: boolean) {
-    if (!cargadoFight) {
+  function onDeath(killers: Creature[], defeatedBy: Cargado | null) {
+    if (defeatedBy) {
+      // te ganó un némesis que ya existía: sube de nivel ESE mismo (no crea uno nuevo)
+      leveledCargado.current = levelUpCargado(defeatedBy, wp.level);
+    } else {
       const eqId = working.current.weapon.id ?? "";
       const idx = pickStolenIndex(invRef.current, eqId);
       let stolen: WeaponOpt | null = null;
@@ -191,13 +201,14 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   function handleCombatEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
     const wasCargado = fightingCargado;
-    if (!res.survived) { onDeath(group, !!wasCargado); return; }
+    if (!res.survived) { onDeath(group, wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
     else awardKill(group);
     const kind = enemyKind(group[0] ?? working.current);
     const mats = rollRoomMaterials(kind, depth.current);
     runMats.current = mergeMats(runMats.current, mats);
     setRoomMats(mats);
+    roomTrap.current = rollRoomTrap(dungeon.current.biome);   // ¿esta sala esconde una trampa?
     const d = rollWeaponDrop(depth.current);
     setDrop(d); setPicked(false); setEquipped(false);
     setSearched(false); setSearching(false); setSearchText(null); searchProgress.current = 0;
@@ -206,7 +217,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   }
   function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number }) {
     working.current = res.player; potionsRef.current = res.potions;
-    if (!res.survived) { onDeath(ambushGroup ?? [], false); return; }
+    if (!res.survived) { onDeath(ambushGroup ?? [], null); return; }
     awardKill(ambushGroup ?? []); setAmbushGroup(null); setResting(false); ambushAt.current = null;
     const back = ambushReturn.current;
     setPhase(back);
@@ -216,12 +227,25 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   function pickUp(d: WeaponOpt) { addToBag(d); setPicked(true); onCheckpoint(buildRun({ phase: "cleared", picked: true })); }
   function equipDrop(d: WeaponOpt) { addToBag(d); working.current = { ...working.current, weapon: toWeapon(d) }; setPicked(true); setEquipped(true); onCheckpoint(buildRun({ phase: "cleared", picked: true, equipped: true })); }
 
+  /** Al dejar una sala sin rebuscarla, una trampa oculta se dispara. Devuelve true si te mató. */
+  function springTrapIfAny(): boolean {
+    const trap = roomTrap.current;
+    roomTrap.current = null;
+    if (!trap) return false;
+    const dmg = trapDamage(trap, wp.maxHp);
+    working.current = { ...working.current, hp: Math.max(0, working.current.hp - dmg) };
+    setTrapMsg(`⚠ ${trap.name} — ${trap.trigger} (−${dmg} vida)`);
+    if (working.current.hp <= 0) { onDeath([], null); return true; }
+    return false;
+  }
   function advance() {
+    setTrapMsg(null);
+    if (springTrapIfAny()) return;
     depth.current += 1; setRoomInStage((r) => r + 1);
     working.current = { ...working.current, energy: working.current.maxEnergy };
     const nf = nextFight(depth.current, stage); setGroup(nf.enemies); setFightingCargado(nf.cargado); setPhase("fight");
   }
-  function goCamp() { setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
+  function goCamp() { if (springTrapIfAny()) return; setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function startRest() {
     hpAtCamp.current = working.current.hp; campStart.current = Date.now(); ambushReturn.current = "camp";
     ambushAt.current = Math.random() < AMBUSH_CHANCE ? 4 + Math.random() * (REST_FULL_SEC * 0.7) : null;
@@ -257,6 +281,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       player: wp, outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
       xp: xpRef.current, points: pointsRef.current,
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
+      leveledCargado: leveledCargado.current,
       materials: runMats.current,
     });
   }
@@ -273,6 +298,9 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
         <span>{dungeon.current.short} · etapa {stage} · sala {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
         <span className="goldmini">Nv {wp.level} · ◈ {runGold} <span className="soft">sin asegurar</span> · ⚗ {potionsRef.current}</span>
       </div>
+      {trapMsg && phase !== "result" && (
+        <div className="trapbanner" onClick={() => setTrapMsg(null)}>{trapMsg} <span className="soft">(toca para cerrar)</span></div>
+      )}
       {stage === 1 && roomInStage === 0 && phase === "fight" && (
         <div className="dungeonintro"><b>{dungeon.current.name}</b><span>{dungeon.current.desc}</span></div>
       )}
@@ -280,7 +308,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
         <div className="levelbanner" onClick={() => setLevelUp(null)}>⬆ {levelUp} <span className="soft">(toca para cerrar)</span></div>
       )}
       {stalkerPending && phase !== "result" && (
-        <div className="stalkerbanner">☠ Un némesis acecha esta cripta{stalker.current ? `: ${stalker.current.creature.name}` : ""}.</div>
+        <div className="stalkerbanner">☠ Un némesis acecha esta cripta{stalker.current ? `: ${stalker.current.creature.name} (Nv ${stalker.current.creature.level})` : ""}.</div>
       )}
       <div className="crawltrack">
         {Array.from({ length: stageRooms }).map((_, i) => (
@@ -290,7 +318,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 
       {phase === "fight" && (
         <>
-          {fightingCargado && <div className="cargadobanner">☠ {fightingCargado.creature.name} — el némesis que se llevó tu botín. Véncelo para recuperarlo.</div>}
+          {fightingCargado && <div className="cargadobanner">☠ {fightingCargado.creature.name} (Nv {fightingCargado.creature.level}) — el némesis que se llevó tu botín. Véncelo para recuperarlo.</div>}
           <Combat key={`s${stage}r${roomInStage}`} player={wp} enemies={group} potions={potionsRef.current} onEnd={handleCombatEnd} />
         </>
       )}

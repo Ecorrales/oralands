@@ -90,3 +90,25 @@ Hoy todas las habilidades pegan a UN solo objetivo (el motor no tiene concepto d
 - El nombre "Tajo" ya sugiere corte amplio pero hoy es single-target (disonancia nombre↔mecánica).
 - Requiere que el motor aprenda "objetivos múltiples" (AbilitySpec con un flag aoe / número de objetivos, y el combate aplique a varios).
 - Encaja perfecto con los grupos de enemigos ya existentes y complementa el uso del escudo para control de multitudes.
+
+## Trampas por zona (autocuidado al avanzar)
+Idea de Nox: al entrar a una sala hay una probabilidad de trampa. Revisar (rebuscar/observar) las descubre y desactiva; avanzar sin revisar arriesga caer en una.
+- La probabilidad es BAJA (no frustrante) pero real: sin revisar casi siempre pasas, pero a veces caes.
+- Convierte "rebuscar" en decisión de autocuidado, no solo de loot. Tensión por zona.
+- POR ZONA (biome del calabozo):
+  - Ruinas: trampas MAN-MADE, intencionales (púas, flechas, dardos de veneno, losas de presión) — más frecuentes y más dañinas. En ruinas revisas todo.
+  - Cripta (no-muertos): mecanismos antiguos, tumbas trampa — frecuencia media.
+  - Guarida/bosque (bestias) y Madriguera (alimañas): peligros NATURALES/manuales (fosas, resbalones, derrumbes, caídas) — menos frecuentes, daño por caída/tropiezo. Andas más despreocupado.
+- Tipos de trampa: púas (daño directo), pozo/foso (daño por caída), flechas/dardos (daño + posible veneno = DoT), veneno (modifier tipo sangrado), losa (aturde/derriba).
+- Revisar la sala (searchChance con DES/INT) también sirve para DETECTAR/DESACTIVAR la trampa antes de avanzar → sinergia con el sistema de rebuscar que ya existe.
+- Daño escala con profundidad. Trampa fallida podría rolar un modifier (veneno como DoT usando el sistema de modifiers existente).
+- Balance: la clave es que el % sea bajo para que no castigue avanzar rápido, pero suficiente para que en zonas peligrosas (ruinas) revisar valga la pena.
+
+## Modo auto-batalla con IA (al tintero)
+Idea: un "modo auto" donde una IA juega el combate y narra su razonamiento en un chat/log.
+- Diseño elegido: opción 2 + toque visual 3 → la IA decide leyendo el estado real, RESALTA el botón elegido, lo ejecuta, y comenta su razonamiento turno a turno.
+- Dos variantes de "cerebro":
+  1) HEURÍSTICO (recomendado para el juego real): agente client-side que elige por valor esperado (acierto% × daño que ya calculamos), apunta al enemigo más cercano a morir, se cura cuando toca. Gratis, funciona en GitHub Pages, determinista, ideal para testear balance (mil peleas). Narra su razonamiento en lenguaje natural (puede ser técnico o con personalidad).
+  2) LLM (Claude de verdad vía API de artifacts): solo funciona dentro del sandbox de claude.ai (llave inyectada); NO en GitHub Pages (no hay llave, e incrustarla es inseguro/costoso). Sirve como demo, no en producción.
+- Narración en chat: el heurístico ya sabe POR QUÉ eligió (comparó EVs), así que solo hay que verbalizarlo. Opción técnica ("Estocada: 58%×36=20.9 supera Finta 10.1") o con personalidad ("este esqueleto ya tiembla, arriesgo el remate").
+- Útil como: demo llamativa, playtester automático (reporta qué se siente injusto/confuso), y caza-bugs/desbalance corriendo muchas partidas.

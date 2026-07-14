@@ -42,7 +42,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
 
   if (b.current === null) {
     const p: Creature = { ...player, modifiers: [] as Modifier[] };
-    const es: Creature[] = enemies.map((e) => ({ ...e, modifiers: [] as Modifier[] }));
+    const es: Creature[] = enemies.map((e) => ({ ...e, modifiers: [] as Modifier[], energy: e.maxEnergy }));
     const maxE = Math.max(...es.map((e) => e.maxEnergy));
     const groupMax = maxE + (es.length - 1);
     b.current = {
@@ -122,6 +122,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     try {
       const s = b.current; s.phase = "enemy";
       s.groupEnergy = Math.min(s.groupMaxEnergy, s.groupEnergy + s.groupRegen);
+      s.enemies.forEach((e) => { if (e.nemesis && !isDead(e)) regenEnergy(e); });  // el némesis recupera su energía propia
       s.enemies.forEach((e, i) => { if (!isDead(e)) tickDots(e, i); });
       if (allDead()) { force(); return endGame(true); }
       if (isDead(s.player)) { force(); return endGame(false); }
@@ -136,21 +137,28 @@ export function Combat({ player, enemies, potions, onEnd }: {
     const s = b.current;
     if (isDead(s.player)) { force(); return endGame(false); }
     if (allDead()) { force(); return endGame(true); }
-    if (++s.guard > 24) return groupDone();
+    if (++s.guard > 50) return groupDone();
     const n = s.enemies.length;
     let actor = -1; let ability: AbilitySpec | null = null;
     for (let k = 0; k < n; k++) {
       const idx = (s.turnPtr + k) % n; const e = s.enemies[idx];
       if (isDead(e) || s.skip.has(idx)) continue;
-      const ab = bestAffordable(e, s.groupEnergy);
+      const pool = e.nemesis ? e.energy : s.groupEnergy;   // el némesis usa SU energía; los demás, el pool del grupo
+      const ab = bestAffordable(e, pool);
       if (ab) { actor = idx; ability = ab; break; }
     }
     if (actor < 0 || !ability) return groupDone();
-    s.turnPtr = (actor + 1) % n; s.skip.add(actor);
     const e = s.enemies[actor];
-    s.groupEnergy -= ability.energyCost;
+    const isNem = !!e.nemesis;
+    if (isNem) e.energy -= ability.energyCost; else s.groupEnergy -= ability.energyCost;
     const r = resolveAbility(ability, e, s.player, DEFAULT_TUNE);
-    if (!r.hit) { pushLog(`${e.name} usa ${ability.name} (${r.chance}%) pero falla.`, "var(--muted)"); force(); setTimeout(stepGroup, 650); return; }
+    const chains = isNem && !!bestAffordable(e, e.energy);   // ¿le queda energía para otro golpe?
+    const doneNow = () => { s.skip.add(actor); s.turnPtr = (actor + 1) % n; };
+    if (!r.hit) {
+      pushLog(`${e.name} usa ${ability.name} (${r.chance}%) pero falla.`, "var(--muted)");
+      if (!chains) doneNow();
+      force(); setTimeout(stepGroup, chains ? 480 : 650); return;
+    }
     const dealt = mitigate(r.damage, s.player.defense ?? 0);
     s.player.hp = Math.max(0, s.player.hp - dealt);
     doShake("player"); spawnFloat("player", "-" + dealt, "#e8635a");
@@ -158,7 +166,9 @@ export function Combat({ player, enemies, potions, onEnd }: {
     pushLog(`${e.name} usa ${ability.name} (${r.chance}%) — ${dealt}${neg > 0 ? ` (−${neg} por defensa)` : ""}.`, "var(--danger)");
     if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(`¡${r.effect!.label}! sobre ${s.player.name}.`, "var(--warn)"); }
     if (isDead(s.player)) { force(); return endGame(false); }
-    force(); setTimeout(stepGroup, 700);
+    const keepChaining = chains && s.player.hp > 0;
+    if (!keepChaining) doneNow();   // si encadena, NO se marca skip: la próxima iteración lo vuelve a elegir
+    force(); setTimeout(stepGroup, keepChaining ? 480 : 700);
    } catch (e) { recoverToPlayer("stepGroup", e); }
   }
   function groupDone() { const s = b.current; s.enemies.forEach((e) => { if (!isDead(e)) ageMods(e); }); endEnemy(); }

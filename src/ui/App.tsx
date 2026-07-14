@@ -290,11 +290,13 @@ export function App() {
     materialsRef.current = newMats; setMaterials(newMats);
     const inv = [...r.inventory, ...r.recoveredWeapons];
     let carg = cargados.filter((c) => !r.defeatedCargados.includes(c.id));
+    if (r.leveledCargado) carg = carg.map((c) => (c.id === r.leveledCargado!.id ? r.leveledCargado! : c));   // némesis que subió de nivel
     if (r.newCargado) { if (carg.length >= MAX_CARGADOS) carg = carg.slice(1); carg = [...carg, r.newCargado]; }
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
     await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
     if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
     if (r.newCargado) setCargadoMsg(`☠ ${r.newCargado.creature.name} se llevó tu botín y ahora te acecha como némesis.`);
+    else if (r.leveledCargado) setCargadoMsg(`☠ ${r.leveledCargado.creature.name} te derrotó de nuevo y ascendió a nivel ${r.leveledCargado.creature.level} — ha crecido desde tu último encuentro.`);
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
     setScreen("hub");
   }

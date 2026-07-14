@@ -24,6 +24,7 @@ export interface Creature {
   energy: number; maxEnergy: number; regen: number;
   // Derivados del equipo (calculados en la capa de juego; 0/vacío por defecto).
   defense?: number;                       // reduce el daño recibido
+  nemesis?: boolean;                       // némesis: pelea como jugador (encadena ataques con su energía)
   evasionBonus?: number;                  // ± evasión por equipo (escudos)
   grantedAbilities?: string[];            // habilidades otorgadas por equipo (escudo: bash)
   statMods?: Partial<Characteristics>;    // ± características por equipo (escudo torre: -des)
