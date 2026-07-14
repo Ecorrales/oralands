@@ -315,6 +315,6 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .trapbanner .soft{color:var(--dim);font-size:10px}
 
 /* botón de idioma (flotante, esquina) */
-.langtoggle{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:50;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:11px 22px;min-height:44px;font-size:13px;font-family:var(--mono);cursor:pointer;letter-spacing:1px;box-shadow:0 4px 18px rgba(0,0,0,.45)}
+.langtoggle{position:fixed;left:90%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:50;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:11px 22px;min-height:44px;font-size:13px;font-family:var(--mono);cursor:pointer;letter-spacing:1px;box-shadow:0 4px 18px rgba(0,0,0,.45)}
 .langtoggle:active{transform:translateX(-50%) scale(.96)}
 .langtoggle:hover{color:var(--ink);border-color:var(--accent)}
