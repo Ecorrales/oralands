@@ -3,7 +3,6 @@
 // La página pública lee ESTE json — nunca toca Firebase directamente.
 import { initializeApp, cert } from "firebase-admin/app";
 import { getDatabase } from "firebase-admin/database";
-import { writeFileSync, mkdirSync } from "node:fs";
 
 const DATABASE_URL = "https://oralands-default-rtdb.firebaseio.com/";
 
@@ -66,9 +65,8 @@ async function main() {
     top10,
   };
 
-  mkdirSync("public", { recursive: true });
-  writeFileSync("public/stats.json", JSON.stringify(stats, null, 2));
-  console.log(`stats.json generado: ${n} jugadores, nivel máx ${stats.maxLevel}, oro máx ${stats.maxGold}`);
+  await getDatabase().ref("stats/global").set(stats);   // escribe al nodo público (Admin SDK ignora las reglas)
+  console.log(`stats/global actualizado: ${n} jugadores, nivel máx ${stats.maxLevel}, oro máx ${stats.maxGold}`);
   process.exit(0);
 }
 
