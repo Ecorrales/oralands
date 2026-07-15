@@ -16,9 +16,9 @@ export function StatsPage({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(import.meta.env.BASE_URL + "stats.json", { cache: "no-store" })
+    fetch("https://oralands-default-rtdb.firebaseio.com/stats/global.json", { cache: "no-store" })
       .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(setStats)
+      .then((data) => { if (!data) throw new Error("sin datos"); setStats(data); })
       .catch(() => setError(true));
   }, []);
 
