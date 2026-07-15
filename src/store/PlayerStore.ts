@@ -31,6 +31,7 @@ export interface SavedGame {
   xp: number;
   points: number;
   maxDepth?: number;    // profundidad máxima histórica alcanzada (para estadísticas)
+  unlockedFloors?: Record<string, number[]>;   // pisos desbloqueados por mazmorra (llaves): { cripta: [5,10], ... }
   savedAt: string;
 }
 
