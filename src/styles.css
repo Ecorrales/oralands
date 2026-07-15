@@ -363,3 +363,13 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .topname{flex:1;font-weight:600;color:var(--ink)}
 .topmeta{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .statfoot{font-size:10px;color:var(--dim);text-align:center;margin-top:12px;font-family:var(--mono)}
+
+/* alerta de llave de profundidad encontrada */
+.keyfound{background:linear-gradient(180deg,#2a2408,#211d06);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:10px;animation:trapPop .28s ease-out}
+.keyfound-h{color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.04em;margin-bottom:3px}
+.keyfound-b{color:#e8dab0;font-size:12.5px;line-height:1.45}
+/* selección de piso de entrada en el selector */
+.floorpick{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.floorbtn{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 16px;cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.floorbtn.on{border-color:var(--accent);color:var(--accent);background:#2a2408}
+.floortitle{font-size:12.5px;color:var(--dim);margin:6px 0 2px}
