@@ -30,9 +30,9 @@ export interface RunResult {
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
 
-export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, onCheckpoint, onExit }: {
+export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, dungeonId, onCheckpoint, onExit }: {
   player: Creature; potions: number; inventory: WeaponOpt[]; xp: number; points: number; cargados: Cargado[];
-  resume: RunState | null; onCheckpoint: (rs: RunState) => void;
+  resume: RunState | null; dungeonId?: string | null; onCheckpoint: (rs: RunState) => void;
   onExit: (r: RunResult) => void;
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
@@ -40,7 +40,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const [stageRooms, setStageRooms] = useState(() => resume?.stageRooms ?? rollRoomCount());
   const [roomInStage, setRoomInStage] = useState(resume?.roomInStage ?? 0);
   const depth = useRef(resume?.depth ?? 0);
-  const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : pickDungeon());
+  const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : (dungeonId ? dungeonById(dungeonId) : pickDungeon()));
   const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
   const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");

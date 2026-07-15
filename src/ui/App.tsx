@@ -6,6 +6,7 @@ import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type Equ
 import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
 import { AccountBar } from "./AccountBar";
+import { DungeonSelect } from "./DungeonSelect";
 import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
@@ -20,11 +21,12 @@ import { MAX_CARGADOS, type Cargado } from "../game/cargados";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
-type Screen = "loading" | "create" | "hub" | "dungeon";
+type Screen = "loading" | "create" | "hub" | "dungeonSelect" | "dungeon";
 type Equipped = Partial<Record<EquipSlot, string>>;
 
 export function App() {
   const [screen, setScreen] = useState<Screen>("loading");
+  const [chosenDungeon, setChosenDungeon] = useState<string | null>(null);
   const [player, setPlayer] = useState<Creature | null>(null);
   const [gold, setGold] = useState(0);
   const [potions, setPotions] = useState(STARTING_POTIONS);
@@ -329,8 +331,11 @@ export function App() {
         <AccountBar auth={auth} busy={authBusy} msg={authMsg} onLink={linkGoogle} onSignOut={signOutGoogle} />
       )}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
-      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setScreen("dungeon"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
-      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
+      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
+      {screen === "dungeonSelect" && player && (
+        <DungeonSelect level={player.level} onBack={() => setScreen("hub")} onPick={(id) => { setChosenDungeon(id); setScreen("dungeon"); }} />
+      )}
+      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} dungeonId={chosenDungeon} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}

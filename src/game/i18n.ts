@@ -25,6 +25,8 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "select.title": { es: "Elige mazmorra", en: "Choose a dungeon" },
+  "select.sub": { es: "¿A dónde bajas? Las más peligrosas se abren al subir de nivel.", en: "Where do you descend? The deadlier ones open as you level up." },
   "dungeon.searching": { es: "Observando…", en: "Searching…" },
   "dungeon.trapFound": { es: "¡Trampa encontrada!", en: "Trap found!" },
   "dungeon.trapDisarmed": { es: "La detectaste y desactivaste a tiempo.", en: "You spotted and disarmed it in time." },

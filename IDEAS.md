@@ -155,3 +155,52 @@ FASES SUGERIDAS (cuando le entremos):
 
 NOTA: es proyecto de varias sesiones. El editor en sí (formularios) es lo fácil; lo laborioso y
 delicado es (2) la capa de datos con fallback y (3) la validación que evita romper el juego en vivo.
+
+## Selector de mazmorra + desbloqueo por nivel + llaves de profundidad — GRANDE
+Resuelve: grind de pisos bajos, falta de sink para oro tardío, y "tienes que pasar por lo fácil
+para llegar a lo divertido". Idea de Nox, diseño cerrado.
+
+### 1. Selector de mazmorra al entrar
+- "Entrar al calabozo" ya NO elige bioma al azar → abre una pantalla de selección de mazmorra.
+- Cada mazmorra muestra su estado: desbloqueada o "🔒 Nv X".
+- 4 mazmorras (biomas ya existentes): cripta, madriguera, guarida (cueva), ruinas.
+
+### 2. Desbloqueo por nivel de personaje (fijo)
+- Madriguera: Nv 1  |  Cripta: Nv 1  |  Guarida: Nv 6  |  Ruinas: Nv 10
+- Bloqueada = gris + candado + "Nv X" hasta alcanzar el nivel. Subir de nivel abre contenido tangible.
+
+### 3. Llaves de profundidad (por mazmorra, permanentes)
+- Llaves SON POR MAZMORRA: llave de Cripta, llave de Madriguera, etc. (no globales).
+- Se encuentran al REBUSCAR la última sala de un piso múltiplo de 5 (piso 5, 10, 15…),
+  con PROBABILIDAD ~35% (premio raro, hace que rebuscar valga). "Pegada a una puerta" (flavor).
+- Al conseguirla, ese piso queda DESBLOQUEADO PERMANENTEMENTE en esa mazmorra.
+- Desbloquear un piso NO obliga a entrar ahí: dentro de la mazmorra elegida, el jugador
+  ELIGE desde qué profundidad empezar (piso 1, o cualquier múltiplo de 5 desbloqueado en ESA mazmorra).
+- Empezar en piso 10 → enemigos ESCALAN al piso 10 (reto real, la dificultad usa la profundidad de entrada).
+- Salto SOLO de entrada: al morir reapareces en el refugio (sin checkpoints de reaparición).
+
+### DATOS NUEVOS (Firebase — cuidado con la clase de bug de arrays/objetos vacíos)
+- SavedGame gana algo como: `unlockedDepths: Record<biome, number[]>` (múltiplos de 5 desbloqueados por mazmorra).
+  OJO: usar stripUndefined; inicializar a {} o [] de forma segura; hydrate con fallback ?? {} / ?? [].
+- El nivel de personaje ya existe (para el gating de desbloqueo).
+- No hace falta guardar "llave" como ítem si el desbloqueo es permanente: basta con registrar el piso desbloqueado.
+  (Alternativa: guardar llaves como inventario si queremos que se vean/coleccionen — decidir al implementar.
+   Por ahora: registrar profundidad desbloqueada por bioma es lo mínimo y más robusto.)
+
+### PIEZAS DE IMPLEMENTACIÓN (cuando le entremos)
+1. dungeons.ts: agregar `minLevel` por DungeonType (mad1/crip1/guar6/ruin10). Quitar pickDungeon aleatorio del flujo de entrada.
+2. Nueva pantalla DungeonSelect: lista de mazmorras con estado (desbloqueada/🔒Nv), y al elegir una,
+   sub-selección de profundidad de entrada (1 + múltiplos de 5 desbloqueados en esa mazmorra).
+3. Dungeon.tsx: aceptar `startDepth` (profundidad de entrada) en vez de arrancar siempre en 1;
+   la escala de enemigos ya usa `depth`, así que arrancar depth alto da reto alto (casi gratis).
+4. Llave: al rebuscar la última sala de un piso múltiplo de 5, rollear ~35% → si sale, registrar
+   ese piso como desbloqueado para el bioma actual + alerta propia ("🗝️ ¡Llave encontrada!" estilo la de trampa).
+   Debe distinguir "última sala del piso" (roomInStage === stageRooms-1) y "piso múltiplo de 5" (stage % 5 === 0).
+5. i18n: textos ES/EN para selector, candados, llave encontrada, selección de profundidad.
+6. Firebase: persistir unlockedDepths con las guardas anti-undefined.
+
+### NOTAS DE BALANCE
+- Niveles de desbloqueo: mad1/crip1/guar6/ruin10. Prob. de llave: 35%.
+- El sink de oro llega solo: mazmorras difíciles piden mejor equipo (forja/tienda) → el oro tardío tiene destino.
+- Verificar: ¿el "stage múltiplo de 5" cuenta como stage global o por-mazmorra? El juego usa stage/room/depth;
+  confirmar que "piso" = depth acumulada y que múltiplo de 5 se mide sobre esa profundidad de entrada + avance.

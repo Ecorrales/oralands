@@ -324,3 +324,16 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .trapfound-h{color:var(--warn);font-weight:700;font-size:13px;letter-spacing:.04em;margin-bottom:3px}
 .trapfound-b{color:#d9c9a0;font-size:12.5px;line-height:1.45}
 @keyframes trapPop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* selector de mazmorra */
+.selsub{color:var(--dim);font-size:12.5px;margin:2px 0 14px;line-height:1.5}
+.dungeonlist{display:flex;flex-direction:column;gap:10px}
+.dungeoncard{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:border-color .15s,transform .05s}
+.dungeoncard:hover{border-color:var(--accent)}
+.dungeoncard:active{transform:scale(.99)}
+.dungeoncard.locked{opacity:.5;cursor:not-allowed;filter:grayscale(.6)}
+.dungeoncard.locked:hover{border-color:var(--line)}
+.dcard-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.dcard-name{font-weight:700;font-size:15px;color:var(--ink)}
+.dcard-lock{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.dcard-desc{font-size:12.5px;color:var(--dim);line-height:1.4}
