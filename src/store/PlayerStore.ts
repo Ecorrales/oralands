@@ -30,6 +30,7 @@ export interface SavedGame {
   run: RunState | null;
   xp: number;
   points: number;
+  maxDepth?: number;    // profundidad máxima histórica alcanzada (para estadísticas)
   savedAt: string;
 }
 

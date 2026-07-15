@@ -25,6 +25,21 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "stats.title": { es: "Estadísticas", en: "Statistics" },
+  "stats.loading": { es: "Cargando estadísticas…", en: "Loading statistics…" },
+  "stats.empty": { es: "Aún no hay estadísticas. Vuelve más tarde.", en: "No statistics yet. Check back later." },
+  "stats.players": { es: "{n} jugadores guardados en la cripta.", en: "{n} players saved in the crypt." },
+  "stats.maxLevel": { es: "nivel máximo", en: "max level" },
+  "stats.avgLevel": { es: "nivel promedio", en: "avg level" },
+  "stats.maxGold": { es: "oro máximo", en: "max gold" },
+  "stats.avgGold": { es: "oro promedio", en: "avg gold" },
+  "stats.deepest": { es: "piso más profundo", en: "deepest floor" },
+  "stats.maxNemesis": { es: "más némesis", en: "most nemeses" },
+  "stats.strongestNemesis": { es: "némesis más temido", en: "most feared nemesis" },
+  "stats.top10": { es: "Top 10 · por nivel", en: "Top 10 · by level" },
+  "stats.noPlayers": { es: "Aún nadie en el ranking.", en: "No one on the board yet." },
+  "stats.updated": { es: "Actualizado:", en: "Updated:" },
+  "hub.stats": { es: "Estadísticas", en: "Statistics" },
   "common.back": { es: "← Volver", en: "← Back" },
   "dungeon.equippedTag": { es: "equipada ✓", en: "equipped ✓" },
   "dungeon.inBagTag": { es: "en mochila ✓", en: "in bag ✓" },

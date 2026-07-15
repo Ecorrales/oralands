@@ -7,6 +7,7 @@ import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
 import { AccountBar } from "./AccountBar";
 import { DungeonSelect } from "./DungeonSelect";
+import { StatsPage } from "./StatsPage";
 import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
@@ -21,7 +22,7 @@ import { MAX_CARGADOS, type Cargado } from "../game/cargados";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
-type Screen = "loading" | "create" | "hub" | "dungeonSelect" | "dungeon";
+type Screen = "loading" | "create" | "hub" | "dungeonSelect" | "dungeon" | "stats";
 type Equipped = Partial<Record<EquipSlot, string>>;
 
 export function App() {
@@ -45,6 +46,7 @@ export function App() {
   const [cargadoMsg, setCargadoMsg] = useState<string | null>(null);
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
+  const maxDepthRef = useRef<number>(0);
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
   const materialsRef = useRef<Mats>({});
@@ -85,6 +87,7 @@ export function App() {
       setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
       materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
+      maxDepthRef.current = Math.max(num(g.maxDepth, 0), g.run?.depth ?? 0);
       const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
       setScreen(savedRun ? "dungeon" : "hub");
     } else setScreen("create");
@@ -131,12 +134,15 @@ export function App() {
     finally { setAuthBusy(false); }
   }
 
-  const persist = (p: Creature, g: number, pot: number, inv: WeaponOpt[], x: number, pts: number, carg: Cargado[]) =>
-    store.save({
+  const persist = (p: Creature, g: number, pot: number, inv: WeaponOpt[], x: number, pts: number, carg: Cargado[]) => {
+    maxDepthRef.current = Math.max(maxDepthRef.current, runRef.current?.depth ?? 0);   // récord histórico de profundidad
+    return store.save({
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
-      materials: materialsRef.current, run: runRef.current, xp: x, points: pts, savedAt: new Date().toISOString(),
+      materials: materialsRef.current, run: runRef.current, xp: x, points: pts,
+      maxDepth: maxDepthRef.current, savedAt: new Date().toISOString(),
     });
+  };
 
   function onCheckpoint(rs: RunState) {
     runRef.current = rs; setRun(rs);
@@ -331,7 +337,8 @@ export function App() {
         <AccountBar auth={auth} busy={authBusy} msg={authMsg} onLink={linkGoogle} onSignOut={signOutGoogle} />
       )}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
-      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} materials={materials} />}
+      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
+      {screen === "stats" && <StatsPage onBack={() => setScreen("hub")} />}
       {screen === "dungeonSelect" && player && (
         <DungeonSelect level={player.level} onBack={() => setScreen("hub")} onPick={(id) => { setChosenDungeon(id); setScreen("dungeon"); }} />
       )}

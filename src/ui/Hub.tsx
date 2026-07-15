@@ -7,9 +7,9 @@ import { MATERIALS, matIcon, matName, matSource, type Mats } from "../game/mater
 import type { Cargado } from "../game/cargados";
 import { InventoryInline } from "./InventoryInline";
 
-export function Hub({ player, gold, potions, inventory, equippedGear, cargados, materials, onFight, onNew, onEquip, onOpenShop, onOpenForge, onOpenEquip }: {
+export function Hub({ player, gold, potions, inventory, equippedGear, cargados, materials, onFight, onNew, onEquip, onOpenShop, onOpenForge, onOpenEquip, onOpenStats }: {
   player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equippedGear: GearItem[]; cargados: Cargado[];
-  onFight: () => void; onNew: () => void; onEquip: (w: WeaponOpt) => void; onOpenShop: () => void; onOpenForge: () => void; onOpenEquip: () => void; materials: Mats;
+  onFight: () => void; onNew: () => void; onEquip: (w: WeaponOpt) => void; onOpenShop: () => void; onOpenForge: () => void; onOpenEquip: () => void; onOpenStats: () => void; materials: Mats;
 }) {
   const [bagTab, setBagTab] = useState<"armas" | "materiales">("armas");
   const [confirmNew, setConfirmNew] = useState(false);
@@ -87,6 +87,7 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         <button onClick={onOpenEquip}>{t("hub.equip")}</button>
         <button onClick={onOpenShop}>{t("hub.shop")}</button>
         <button onClick={onOpenForge}>{t("hub.forge")}</button>
+        <button onClick={onOpenStats}>{t("hub.stats")}</button>
         {confirmNew
           ? (
             <div className="confirmrow">

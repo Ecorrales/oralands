@@ -204,3 +204,37 @@ para llegar a lo divertido". Idea de Nox, diseño cerrado.
 - El sink de oro llega solo: mazmorras difíciles piden mejor equipo (forja/tienda) → el oro tardío tiene destino.
 - Verificar: ¿el "stage múltiplo de 5" cuenta como stage global o por-mazmorra? El juego usa stage/room/depth;
   confirmar que "piso" = depth acumulada y que múltiplo de 5 se mide sobre esa profundidad de entrada + avance.
+
+## Página de estadísticas pública (dashboard del creador) — EN CONSTRUCCIÓN
+Idea de Nox: página pública para ver si la gente juega. Agregados + top 10 con nombres de personaje.
+
+### Arquitectura (elegida por Nox — muy limpia)
+- GitHub Action programado (cron cada 8h) corre un script Node con Firebase Admin SDK
+  (service account en secretos de GitHub), lee todos los saves/{uid}, calcula métricas, y
+  escribe/commitea un stats.json en el repo (publicado en Pages).
+- La página pública NUNCA toca Firebase: solo lee el stats.json estático. Ventajas: no expone
+  credenciales, no hay abuso de lecturas, carga instantánea, reglas de Firebase siguen cerradas.
+- Vive en DOS lados apuntando al mismo JSON: stats.html (dashboard dedicado) + botón "Estadísticas"
+  en el hub de la app. Ambos fetch al mismo /stats.json.
+
+### Métricas (agregados + top 10)
+Directas (de los saves): jugadores guardados (conteo), lvl máx, lvl promedio, oro máx, oro promedio,
+cantidad máx de némesis, némesis más fuerte (mayor nivel entre todos los cargados).
+Top 10: ranking por nivel (o por oro) con NOMBRE DE PERSONAJE.
+maxDepth: nivel más profundo llegado — NO retroactivo, se empieza a registrar ahora.
+
+### Piezas
+1. [HACER YA] Registrar maxDepth en el save: campo maxDepth en SavedGame, se actualiza cada vez que
+   se baja (depth). Sin esto la métrica de profundidad no tiene datos. NO retroactivo.
+2. Script Node scripts/build-stats.mjs: Admin SDK lee saves/*, agrega, escribe public/stats.json.
+3. Workflow .github/workflows/stats.yml: cron cada 8h + workflow_dispatch manual; corre el script,
+   commitea stats.json (o lo publica como artifact de Pages).
+4. Secreto GitHub: FIREBASE_SERVICE_ACCOUNT (JSON de service account con permisos de lectura).
+5. Página stats.html + botón "Estadísticas" en hub. Estética consistente (parchment/brass del juego).
+6. i18n ES/EN de la página.
+
+### Consideraciones
+- Privacidad: nombres de PERSONAJE (no de cuenta/email) — es seguro, son alias del juego.
+- El JSON debe ser robusto a saves malformados (mismo problema de arrays/objetos vacíos): el script
+  valida y salta entradas corruptas.
+- maxDepth: guardar el máximo histórico (Math.max con el actual) por jugador, no la profundidad actual.

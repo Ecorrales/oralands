@@ -349,3 +349,17 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .full{width:100%}
 .ghost{background:transparent;color:var(--muted)}
 .ghost:hover{color:var(--ink);border-color:var(--accent)}
+
+/* página de estadísticas */
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.statcell{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.statnum{font-size:22px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+.statlbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.statnemesis{background:#2a1416;border:1px solid #6b2f2f;border-radius:10px;padding:11px 13px;margin-top:8px;display:flex;flex-direction:column;gap:3px}
+.statnemesis b{color:#e8a0a0;font-size:14px}
+.toplist{display:flex;flex-direction:column;gap:6px}
+.toprow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.toprank{font-family:var(--mono);color:var(--accent);font-weight:700;min-width:32px}
+.topname{flex:1;font-weight:600;color:var(--ink)}
+.topmeta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.statfoot{font-size:10px;color:var(--dim);text-align:center;margin-top:12px;font-family:var(--mono)}

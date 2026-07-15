@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Oralands · Statistics</title>
+<style>
+  :root{
+    --bg:#100d0a; --panel:#1a1510; --card:#221c15; --line:#3a2f24;
+    --ink:#f0e6d2; --muted:#c9bda3; --dim:#8a7d68; --accent:#c9a24a; --mono:ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% 0%,#1c1812,#100d0a 70%);color:var(--ink);
+       font-family:-apple-system,system-ui,sans-serif;min-height:100vh;display:flex;justify-content:center;padding:24px 16px}
+  .wrap{width:100%;max-width:520px}
+  h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 2px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .cell{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px;display:flex;flex-direction:column;gap:3px}
+  .num{font-size:23px;font-weight:700;color:var(--accent);font-family:var(--mono)}
+  .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+  .nem{background:#2a1416;border:1px solid #6b2f2f;border-radius:11px;padding:12px 14px;margin-bottom:18px;display:flex;flex-direction:column;gap:3px}
+  .nem .lbl{color:#c98a8a}
+  .nem b{color:#e8a0a0;font-size:15px}
+  .caph{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+  .row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 13px;margin-bottom:6px}
+  .rank{font-family:var(--mono);color:var(--accent);font-weight:700;min-width:34px}
+  .name{flex:1;font-weight:600}
+  .meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .foot{font-size:10px;color:var(--dim);text-align:center;margin-top:16px;font-family:var(--mono)}
+  .msg{color:var(--muted);font-size:14px;padding:40px 0;text-align:center}
+  a.play{display:inline-block;margin-top:16px;color:var(--accent);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 16px}
+  a.play:hover{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚔ Oralands · Statistics</h1>
+  <p class="sub" id="sub">Loading…</p>
+  <div id="content"></div>
+  <div style="text-align:center"><a class="play" href="./">▶ Play Oralands</a></div>
+</div>
+<script>
+(async function () {
+  const sub = document.getElementById("sub");
+  const content = document.getElementById("content");
+  try {
+    const res = await fetch("stats.json", { cache: "no-store" });
+    if (!res.ok) throw new Error();
+    const s = await res.json();
+    sub.textContent = s.players + " players saved in the crypt.";
+    const cell = (num, lbl) => `<div class="cell"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>`;
+    const rows = (s.top10 || []).map(p =>
+      `<div class="row"><span class="rank">#${p.rank}</span><span class="name">${escapeHtml(p.name)}</span><span class="meta">Lv ${p.level} · ◈ ${p.gold}</span></div>`
+    ).join("") || '<p class="msg">No one on the board yet.</p>';
+    content.innerHTML =
+      '<div class="grid">' +
+        cell(s.maxLevel, "max level") + cell(s.avgLevel, "avg level") +
+        cell("◈ " + s.maxGold, "max gold") + cell("◈ " + s.avgGold, "avg gold") +
+        cell(s.deepestRun, "deepest floor") + cell(s.maxNemesis, "most nemeses") +
+      '</div>' +
+      '<div class="nem"><span class="lbl">☠ MOST FEARED NEMESIS</span><b>' +
+        escapeHtml(s.strongestNemesis.name) + ' · Lv ' + s.strongestNemesis.level + '</b></div>' +
+      '<p class="caph">Top 10 · by level</p>' + rows +
+      '<p class="foot">Updated: ' + new Date(s.generatedAt).toLocaleString() + '</p>';
+  } catch (e) {
+    sub.textContent = "";
+    content.innerHTML = '<p class="msg">No statistics yet. Check back later.</p>';
+  }
+  function escapeHtml(str){return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+})();
+</script>
+</body>
+</html>
