@@ -16,7 +16,7 @@ export interface Trap {
 // Probabilidad de que una sala esconda una trampa, por bioma. Baja pero real.
 const TRAP_CHANCE: Record<Biome, number> = {
   ruinas: 0.35,     // man-made, intencionales: revisas todo
-  cripta: 0.20,     // mecanismos antiguos: frecuencia media
+  cripta: 0.12,     // mecanismos antiguos: frecuencia baja-media
   cueva: 0.10,      // bestias: peligros naturales, andas despreocupado
   madriguera: 0.10, // alimañas: igual, natural y esporádico
 };

@@ -228,7 +228,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
               <div className="mt">Nv {e.level} · {KIND_ES[enemyKind(e)]}</div>
               <div className="bar"><div style={{ width: Math.max(0, e.hp / e.maxHp * 100) + "%", background: "var(--hp)" }} /></div>
               <div className="hpt">{Math.max(0, Math.round(e.hp))} / {e.maxHp}</div>
-              <div className="mods">{e.modifiers.map((m, j) => <span key={j} className={"pill " + pillClass(m)}>{m.label} {m.duration}t</span>)}</div>
+              <div className="mods">{e.modifiers.map((m, j) => <span key={j} className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span>)}</div>
             </div>
           );
         })}
@@ -241,7 +241,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
         <div className="bar"><div style={{ width: Math.max(0, s.player.hp / s.player.maxHp * 100) + "%", background: s.player.hp / s.player.maxHp < 0.2 ? "var(--danger)" : "var(--php)" }} /></div>
         <div className="rw" style={{ marginTop: 6 }}><span style={{ fontSize: 11 }}>{t("common.energyLbl")}</span><span>{s.player.energy} / {s.player.maxEnergy} ⚡</span></div>
         <div className="bar" style={{ height: 6 }}><div style={{ width: Math.max(0, s.player.energy / s.player.maxEnergy * 100) + "%", background: "var(--energy)" }} /></div>
-        <div className="mods">{s.player.modifiers.map((m, i) => <span key={i} className={"pill " + pillClass(m)}>{m.label} {m.duration}t</span>)}</div>
+        <div className="mods">{s.player.modifiers.map((m, i) => <span key={i} className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span>)}</div>
       </div>
 
       <div className="log">{s.log.map((l, i) => <p key={i} style={{ color: l.color }}>{l.text}</p>)}</div>
@@ -264,7 +264,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
                 return (
                   <button key={ab.id} className="primary move" disabled={!canAct || s.player.energy < ab.energyCost} title={abilityDesc(ab.id)} onClick={() => useAbilityPlayer(ab)}>
                     <span className="mvtop">{abilityName(ab.id)} <span className="mvcost">{ab.energyCost}⚡</span></span>
-                    <span className="mvmeta">{estHit}% · ≈{dealt}{ab.effect ? ` · ${ab.effect.label} ${effPct}%` : ""}</span>
+                    <span className="mvmeta">{estHit}% · ≈{dealt}{ab.effect ? ` · ${tName(ab.effect.label)} ${effPct}%` : ""}</span>
                   </button>
                 );
               });

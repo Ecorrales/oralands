@@ -25,7 +25,7 @@ export function InventoryInline({ player, inventory, onEquip }: {
               {!ok && <small className="reqline">requiere {reqTxt}</small>}
             </div>
             {equipped ? <span className="eqmark">✓</span>
-              : ok ? <button className="small" onClick={() => onEquip(w)}>Equipar</button>
+              : ok ? <button className="small" onClick={() => onEquip(w)}>{t("common.equipVerb")}</button>
               : <span className="lockmini">bloqueada</span>}
           </div>
         );

@@ -77,6 +77,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const leveledCargado = useRef<Cargado | null>(null);
   const roomTrap = useRef<Trap | null>(null);
   const [trapMsg, setTrapMsg] = useState<string | null>(null);
+  const [trapAlert, setTrapAlert] = useState<string | null>(null);   // alerta propia al DETECTAR una trampa
   const defeated = useRef<string[]>(resume?.defeated ? [...resume.defeated] : []);
   const recovered = useRef<WeaponOpt[]>(resume?.recovered ? [...resume.recovered] : []);
   const searchStart = useRef(0);
@@ -145,9 +146,8 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           runMats.current = mergeMats(runMats.current, mats);
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
-        let trapNote = "";
-        if (roomTrap.current) { trapNote = ` ⚠ ${t("dungeon.trapDetected")} ${tName(roomTrap.current.detect)}`; roomTrap.current = null; }
-        setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra + trapNote);
+        if (roomTrap.current) { setTrapAlert(tName(roomTrap.current.detect)); roomTrap.current = null; }
+        setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
       force();
@@ -178,7 +178,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     xpRef.current = res.xp; pointsRef.current = res.points;
     if (res.leveled.length) {
       const to = res.leveled[res.leveled.length - 1];
-      setLevelUp(`¡Nivel ${to}! +${res.leveled.length * POINTS_PER_LEVEL} puntos — repártelos en el campamento.`);
+      setLevelUp(t("dungeon.levelUp", { to, pts: res.leveled.length * POINTS_PER_LEVEL }));
     }
   }
   function onDeath(killers: Creature[], defeatedBy: Cargado | null) {
@@ -240,7 +240,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     return false;
   }
   function advance() {
-    setTrapMsg(null);
+    setTrapMsg(null); setTrapAlert(null);
     if (springTrapIfAny()) return;
     depth.current += 1; setRoomInStage((r) => r + 1);
     working.current = { ...working.current, energy: working.current.maxEnergy };
@@ -254,6 +254,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     onCheckpoint(buildRun({ phase: "camp", resting: true }));
   }
   function startSearch() {
+    setTrapAlert(null);
     searchStart.current = Date.now(); searchProgress.current = 0;
     searchFound.current = Math.random() < searchChance(wp.characteristics.dexterity, wp.characteristics.intelligence);
     searchGoldAmt.current = searchFound.current ? searchGold(depth.current) : 0;
@@ -297,7 +298,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     <div>
       <div className="crawlbar">
         <span>{tName(dungeon.current.short)} · {t("dungeon.stage")} {stage} · {t("dungeon.room")} {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
-        <span className="goldmini">Nv {wp.level} · ◈ {runGold} <span className="soft">sin asegurar</span> · ⚗ {potionsRef.current}</span>
+        <span className="goldmini">{t("common.lvAbbr")} {wp.level} · ◈ {runGold} <span className="soft">{t("status.unsecured")}</span> · ⚗ {potionsRef.current}</span>
       </div>
       {trapMsg && phase !== "result" && (
         <div className="trapbanner" onClick={() => setTrapMsg(null)}>{trapMsg} <span className="soft">(toca para cerrar)</span></div>
@@ -333,9 +334,9 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 
       {phase === "cleared" && (
         <div className="panel">
-          <div className="cap">Sala despejada</div>
+          <div className="cap">{t("dungeon.roomCleared")}</div>
           <div className="loot">
-            <div className="lootgold">{roomGold > 0 ? `◈ +${roomGold} oro` : <span className="nogold">{noGoldLine.current || "Sin oro esta vez."}</span>}</div>
+            <div className="lootgold">{roomGold > 0 ? t("dungeon.goldReward", { n: roomGold }) : <span className="nogold">{noGoldLine.current ? tName(noGoldLine.current) : t("dungeon.noGoldFallback")}</span>}</div>
 
             <div className="rewardrow">
               {roomXp > 0 && <span className="rewardxp">+{roomXp} XP</span>}
@@ -353,13 +354,13 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
                 <div className="dropinfo"><b>{tName(drop.name)}</b><small>{t("common.damageLbl")}{drop.damage} · {drop.twoHanded ? t("common.twoHandsLong") : t("common.oneHandLong")} · {moveText(drop.abilities)}</small></div>
                 {picked ? <span className="equipped">{equipped ? "equipada ✓" : "en mochila ✓"}</span> : (
                   <div className="dropbtns">
-                    {dropOk && <button className="small" onClick={() => equipDrop(drop)}>Equipar</button>}
-                    <button className="small ghost" onClick={() => pickUp(drop)}>Recoger</button>
+                    {dropOk && <button className="small" onClick={() => equipDrop(drop)}>{t("common.equipVerb")}</button>}
+                    <button className="small ghost" onClick={() => pickUp(drop)}>{t("dungeon.pickUp")}</button>
                     {!dropOk && <span className="locked">req: {dropReqTxt}</span>}
                   </div>
                 )}
               </div>
-            ) : <div className="nodrop">Sin arma en esta sala.</div>}
+            ) : <div className="nodrop">{t("dungeon.noWeaponHere")}</div>}
           </div>
 
           <div className="searchbox">
@@ -367,17 +368,25 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
               <>
                 <p className="searchtxt">{searchIntro(dungeon.current.biome)}</p>
                 <div className="obsbar"><div style={{ width: (searchProgress.current * 100) + "%" }} /></div>
-                <div className="obslbl">Observando…</div>
+                <div className="obslbl">{t("dungeon.searching")}</div>
               </>
             ) : searched ? (
-              <p className={"searchtxt" + (searchText && searchText.includes("+◈") ? " hit" : "")}>{searchText}</p>
+              <>
+                {trapAlert && (
+                  <div className="trapfound">
+                    <div className="trapfound-h">⚠ {t("dungeon.trapFound")}</div>
+                    <div className="trapfound-b">{trapAlert}</div>
+                  </div>
+                )}
+                <p className={"searchtxt" + (searchText && searchText.includes("+◈") ? " hit" : "")}>{searchText}</p>
+              </>
             ) : (
-              <button className="small ghost full" onClick={startSearch}>🔍 Rebuscar la sala</button>
+              <button className="small ghost full" onClick={startSearch}>{t("dungeon.searchRoom")}</button>
             )}
           </div>
 
           <div className="bar" style={{ margin: "12px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
-          <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥ <span className="soft">— no se cura entre salas</span></div>
+          <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥ <span className="soft">{t("dungeon.noHealBetween")}</span></div>
           <div className="actions" style={{ marginTop: 14 }}>
             {isLastOfStage
               ? <button className="primary" disabled={searching} onClick={goCamp}>{t("dungeon.toCamp")}</button>
@@ -388,19 +397,19 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 
       {phase === "camp" && (
         <div className="panel">
-          <div className="cap">🏕️ Campamento · etapa {stage} despejada</div>
+          <div className="cap">{t("dungeon.campTitle", { stage })}</div>
           <div className="bar" style={{ margin: "6px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
           <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥</div>
           {resting ? (
             <>
               <p className="clearmsg" style={{ marginTop: 10 }}>{t("dungeon.restingFlavor")}</p>
               <div className="actions" style={{ marginTop: 14 }}>
-                <button className="primary" onClick={breakCamp}>Levantar campamento</button>
+                <button className="primary" onClick={breakCamp}>{t("dungeon.breakCamp")}</button>
               </div>
             </>
           ) : (
             <>
-              <p className="clearmsg" style={{ marginTop: 10 }}>Sobreviviste la etapa {stage}. ¿Descansas, bajas más profundo, o sales con el botín?</p>
+              <p className="clearmsg" style={{ marginTop: 10 }}>{t("dungeon.campPrompt", { stage })}</p>
               <div className="campactions">
                 <button onClick={startRest} disabled={wp.hp >= wp.maxHp}>{t("dungeon.restHere")}</button>
                 <button className="primary" onClick={continueDeeper}>{t("dungeon.deeper", { n: stage + 1 })}</button>
@@ -410,10 +419,10 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             </>
           )}
 
-          <div className="cap" style={{ marginTop: 18 }}>Características {pointsRef.current > 0 && <span className="tag">{pointsRef.current} pts</span>}</div>
+          <div className="cap" style={{ marginTop: 18 }}>{t("dungeon.characteristics")} {pointsRef.current > 0 && <span className="tag">{t("common.ptsTag", { n: pointsRef.current })}</span>}</div>
           <div className="campblock"><StatsInline player={wp} points={pointsRef.current} onSpend={campSpend} /></div>
 
-          <div className="cap" style={{ marginTop: 16 }}>Inventario</div>
+          <div className="cap" style={{ marginTop: 16 }}>{t("dungeon.inventory")}</div>
           <div className="campblock"><InventoryInline player={wp} inventory={invRef.current} onEquip={campEquip} /></div>
         </div>
       )}
@@ -436,7 +445,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             </>
           )}
           <div className="actions" style={{ marginTop: 14 }}>
-            <button className="primary" onClick={finish}>Volver al refugio</button>
+            <button className="primary" onClick={finish}>{t("dungeon.returnRefuge")}</button>
           </div>
         </div>
       )}
