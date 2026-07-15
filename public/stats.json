@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-07-15T05:25:09.810Z",
+  "generatedAt": "2026-07-15T05:35:19.636Z",
   "players": 5,
-  "maxLevel": 20,
-  "avgLevel": 6.4,
-  "maxGold": 5235,
-  "avgGold": 1193,
+  "maxLevel": 6,
+  "avgLevel": 2.6,
+  "maxGold": 730,
+  "avgGold": 146,
   "maxNemesis": 3,
-  "deepestRun": 0,
+  "deepestRun": 2,
   "strongestNemesis": {
     "name": "Ombra la Amortajada el Espadachín",
     "level": 3
@@ -14,38 +14,38 @@
   "top10": [
     {
       "rank": 1,
-      "name": "Manny",
-      "level": 20,
-      "gold": 5235,
-      "maxDepth": 0
-    },
-    {
-      "rank": 2,
       "name": "Moonlight",
       "level": 6,
       "gold": 730,
       "maxDepth": 0
     },
     {
-      "rank": 3,
+      "rank": 2,
       "name": "Vaquero",
       "level": 2,
       "gold": 2,
       "maxDepth": 0
     },
     {
-      "rank": 4,
+      "rank": 3,
       "name": "PhoniexS",
       "level": 2,
       "gold": 0,
       "maxDepth": 0
     },
     {
-      "rank": 5,
+      "rank": 4,
       "name": "Boris",
       "level": 2,
       "gold": 0,
       "maxDepth": 0
+    },
+    {
+      "rank": 5,
+      "name": "Manny",
+      "level": 1,
+      "gold": 0,
+      "maxDepth": 2
     }
   ]
 }
