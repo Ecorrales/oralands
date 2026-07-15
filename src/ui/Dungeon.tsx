@@ -30,16 +30,18 @@ export interface RunResult {
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
 
-export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, dungeonId, onCheckpoint, onExit }: {
+export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, dungeonId, startStage, unlockedFloors, onUnlockFloor, onCheckpoint, onExit }: {
   player: Creature; potions: number; inventory: WeaponOpt[]; xp: number; points: number; cargados: Cargado[];
-  resume: RunState | null; dungeonId?: string | null; onCheckpoint: (rs: RunState) => void;
+  resume: RunState | null; dungeonId?: string | null; startStage?: number;
+  unlockedFloors?: Record<string, number[]>; onUnlockFloor?: (dungeonId: string, floor: number) => void;
+  onCheckpoint: (rs: RunState) => void;
   onExit: (r: RunResult) => void;
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
-  const [stage, setStage] = useState(resume?.stage ?? 1);
+  const [stage, setStage] = useState(resume?.stage ?? startStage ?? 1);
   const [stageRooms, setStageRooms] = useState(() => resume?.stageRooms ?? rollRoomCount());
   const [roomInStage, setRoomInStage] = useState(resume?.roomInStage ?? 0);
-  const depth = useRef(resume?.depth ?? 0);
+  const depth = useRef(resume?.depth ?? (startStage && startStage > 1 ? (startStage - 1) * 5 : 0));
   const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : (dungeonId ? dungeonById(dungeonId) : pickDungeon()));
   const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
@@ -78,6 +80,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const roomTrap = useRef<Trap | null>(null);
   const [trapMsg, setTrapMsg] = useState<string | null>(null);
   const [trapAlert, setTrapAlert] = useState<string | null>(null);   // alerta propia al DETECTAR una trampa
+  const [keyAlert, setKeyAlert] = useState<number | null>(null);      // piso desbloqueado por una llave encontrada
   const defeated = useRef<string[]>(resume?.defeated ? [...resume.defeated] : []);
   const recovered = useRef<WeaponOpt[]>(resume?.recovered ? [...resume.recovered] : []);
   const searchStart = useRef(0);
@@ -147,6 +150,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
         if (roomTrap.current) { setTrapAlert(tName(roomTrap.current.detect)); roomTrap.current = null; }
+        // LLAVE DE PROFUNDIDAD: última sala de un piso múltiplo de 5, 35% al rebuscar
+        const dgId = dungeon.current.id;
+        const already = (unlockedFloors?.[dgId] ?? []).includes(stage);
+        if (stage % 5 === 0 && roomInStage + 1 >= stageRooms && !already && Math.random() < 0.35) {
+          onUnlockFloor?.(dgId, stage); setKeyAlert(stage);
+        }
         setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
@@ -240,7 +249,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     return false;
   }
   function advance() {
-    setTrapMsg(null); setTrapAlert(null);
+    setTrapMsg(null); setTrapAlert(null); setKeyAlert(null);
     if (springTrapIfAny()) return;
     depth.current += 1; setRoomInStage((r) => r + 1);
     working.current = { ...working.current, energy: working.current.maxEnergy };
@@ -254,7 +263,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     onCheckpoint(buildRun({ phase: "camp", resting: true }));
   }
   function startSearch() {
-    setTrapAlert(null);
+    setTrapAlert(null); setKeyAlert(null);
     searchStart.current = Date.now(); searchProgress.current = 0;
     searchFound.current = Math.random() < searchChance(wp.characteristics.dexterity, wp.characteristics.intelligence);
     searchGoldAmt.current = searchFound.current ? searchGold(depth.current) : 0;
@@ -363,6 +372,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             ) : <div className="nodrop">{t("dungeon.noWeaponHere")}</div>}
           </div>
 
+          {searched && keyAlert && (
+            <div className="keyfound">
+              <div className="keyfound-h">🗝️ {t("dungeon.keyFound")}</div>
+              <div className="keyfound-b">{t("dungeon.keyDesc", { floor: keyAlert, dungeon: tName(dungeon.current.name) })}</div>
+            </div>
+          )}
           {searched && trapAlert && (
             <div className="trapfound">
               <div className="trapfound-h">⚠ {t("dungeon.trapFound")}</div>

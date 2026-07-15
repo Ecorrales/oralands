@@ -28,6 +28,7 @@ type Equipped = Partial<Record<EquipSlot, string>>;
 export function App() {
   const [screen, setScreen] = useState<Screen>("loading");
   const [chosenDungeon, setChosenDungeon] = useState<string | null>(null);
+  const [chosenFloor, setChosenFloor] = useState<number>(1);
   const [player, setPlayer] = useState<Creature | null>(null);
   const [gold, setGold] = useState(0);
   const [potions, setPotions] = useState(STARTING_POTIONS);
@@ -47,6 +48,7 @@ export function App() {
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
+  const unlockedFloorsRef = useRef<Record<string, number[]>>({});
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
   const materialsRef = useRef<Mats>({});
@@ -88,6 +90,7 @@ export function App() {
       materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
       maxDepthRef.current = Math.max(num(g.maxDepth, 0), g.run?.depth ?? 0);
+      unlockedFloorsRef.current = (g.unlockedFloors && typeof g.unlockedFloors === "object") ? g.unlockedFloors : {};
       const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
       setScreen(savedRun ? "dungeon" : "hub");
     } else setScreen("create");
@@ -140,7 +143,7 @@ export function App() {
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
       materials: materialsRef.current, run: runRef.current, xp: x, points: pts,
-      maxDepth: maxDepthRef.current, savedAt: new Date().toISOString(),
+      maxDepth: maxDepthRef.current, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
     });
   };
 
@@ -340,9 +343,11 @@ export function App() {
       {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
       {screen === "stats" && <StatsPage onBack={() => setScreen("hub")} />}
       {screen === "dungeonSelect" && player && (
-        <DungeonSelect level={player.level} onBack={() => setScreen("hub")} onPick={(id) => { setChosenDungeon(id); setScreen("dungeon"); }} />
+        <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
       )}
-      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} dungeonId={chosenDungeon} onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
+      {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} dungeonId={chosenDungeon} startStage={chosenFloor} unlockedFloors={unlockedFloorsRef.current}
+        onUnlockFloor={(dgId, floor) => { const cur = unlockedFloorsRef.current[dgId] ?? []; if (!cur.includes(floor)) { unlockedFloorsRef.current = { ...unlockedFloorsRef.current, [dgId]: [...cur, floor].sort((a, b) => a - b) }; } }}
+        onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
