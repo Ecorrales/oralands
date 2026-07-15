@@ -1,6 +1,6 @@
 // Enemigos "cargados": el que te mata se gradúa con nombre + título, sube de nivel,
 // y carga lo que dejaste caer (oro sin asegurar + un arma al azar de tu mochila).
-import { recomputeDerived, type Creature } from "../engine";
+import { recomputeDerived, type Creature, type Weapon } from "../engine";
 import { enemyKind } from "./enemies";
 import { xpToNext } from "./progression";
 import type { WeaponOpt } from "./catalog";
@@ -74,6 +74,12 @@ export function graduateCargado(killers: Creature[], gold: number, stolen: Weapo
   const kind = enemyKind(base);
   const c: Creature = { ...base, characteristics: { ...base.characteristics }, tags: [...base.tags], weapon: { ...base.weapon }, modifiers: [], nemesis: true };
   c.level += 1;                 // sube de nivel al graduarse
+  if (stolen) {
+    // el némesis EMPUÑA el arma que te robó — su título ya lo anuncia, ahora pelea así
+    const w: Weapon = { id: stolen.id, name: stolen.name, damage: stolen.damage, accuracy: stolen.accuracy, abilities: [...stolen.abilities] };
+    if (stolen.twoHanded) w.twoHanded = true;
+    c.weapon = w;
+  }
   recomputeDerived(c);
   c.hp = c.maxHp; c.energy = c.maxEnergy;
   c.name = `${nameFor(kind)} ${titleFor(stolen)}`;
