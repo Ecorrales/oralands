@@ -352,7 +352,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             {drop ? (
               <div className={"dropcard" + (picked ? " done" : "")}>
                 <div className="dropinfo"><b>{tName(drop.name)}</b><small>{t("common.damageLbl")}{drop.damage} · {drop.twoHanded ? t("common.twoHandsLong") : t("common.oneHandLong")} · {moveText(drop.abilities)}</small></div>
-                {picked ? <span className="equipped">{equipped ? "equipada ✓" : "en mochila ✓"}</span> : (
+                {picked ? <span className="equipped">{equipped ? t("dungeon.equippedTag") : t("dungeon.inBagTag")}</span> : (
                   <div className="dropbtns">
                     {dropOk && <button className="small" onClick={() => equipDrop(drop)}>{t("common.equipVerb")}</button>}
                     <button className="small ghost" onClick={() => pickUp(drop)}>{t("dungeon.pickUp")}</button>
@@ -363,27 +363,28 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             ) : <div className="nodrop">{t("dungeon.noWeaponHere")}</div>}
           </div>
 
-          <div className="searchbox">
-            {searching ? (
-              <>
-                <p className="searchtxt">{searchIntro(dungeon.current.biome)}</p>
-                <div className="obsbar"><div style={{ width: (searchProgress.current * 100) + "%" }} /></div>
-                <div className="obslbl">{t("dungeon.searching")}</div>
-              </>
-            ) : searched ? (
-              <>
-                {trapAlert && (
-                  <div className="trapfound">
-                    <div className="trapfound-h">⚠ {t("dungeon.trapFound")}</div>
-                    <div className="trapfound-b">{trapAlert}</div>
-                  </div>
-                )}
+          {searched && trapAlert && (
+            <div className="trapfound">
+              <div className="trapfound-h">⚠ {t("dungeon.trapFound")}</div>
+              <div className="trapfound-b">{trapAlert}</div>
+            </div>
+          )}
+
+          {!searched && !searching ? (
+            <button className="searchbox searchcard-btn" onClick={startSearch}>{t("dungeon.searchRoom")}</button>
+          ) : (
+            <div className="searchbox">
+              {searching ? (
+                <>
+                  <p className="searchtxt">{searchIntro(dungeon.current.biome)}</p>
+                  <div className="obsbar"><div style={{ width: (searchProgress.current * 100) + "%" }} /></div>
+                  <div className="obslbl">{t("dungeon.searching")}</div>
+                </>
+              ) : (
                 <p className={"searchtxt" + (searchText && searchText.includes("+◈") ? " hit" : "")}>{searchText}</p>
-              </>
-            ) : (
-              <button className="small ghost full" onClick={startSearch}>{t("dungeon.searchRoom")}</button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           <div className="bar" style={{ margin: "12px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
           <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥ <span className="soft">{t("dungeon.noHealBetween")}</span></div>

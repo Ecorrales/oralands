@@ -213,7 +213,7 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .combat .actions button{padding:15px 12px;font-size:15px}
 
 /* rebuscar sala */
-.searchbox{margin-top:10px}
+.searchbox{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
 .searchbox .full{width:100%;padding:11px}
 .searchtxt{font-size:12.5px;color:var(--muted);line-height:1.5;font-style:italic;margin:4px 0}
 .searchtxt.hit{color:var(--accent);font-style:normal}
@@ -337,3 +337,15 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .dcard-name{font-weight:700;font-size:15px;color:var(--ink)}
 .dcard-lock{font-size:11px;color:var(--muted);font-family:var(--mono);white-space:nowrap}
 .dcard-desc{font-size:12.5px;color:var(--dim);line-height:1.4}
+
+/* variante: la tarjeta de rebuscar es un botón cuando está inactiva */
+.searchcard-btn{width:100%;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s}
+.searchcard-btn:hover{border-color:var(--accent);color:var(--ink)}
+.searchcard-btn:active{transform:scale(.99)}
+.searchbox .obsbar{margin-bottom:0}
+.searchbox .searchtxt{margin:0}
+
+/* utilidades globales de botón */
+.full{width:100%}
+.ghost{background:transparent;color:var(--muted)}
+.ghost:hover{color:var(--ink);border-color:var(--accent)}
