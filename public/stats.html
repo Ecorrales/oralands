@@ -45,9 +45,10 @@
   const sub = document.getElementById("sub");
   const content = document.getElementById("content");
   try {
-    const res = await fetch("stats.json", { cache: "no-store" });
+    const res = await fetch("https://oralands-default-rtdb.firebaseio.com/stats/global.json", { cache: "no-store" });
     if (!res.ok) throw new Error();
     const s = await res.json();
+    if (!s) throw new Error("sin datos");
     sub.textContent = s.players + " players saved in the crypt.";
     const cell = (num, lbl) => `<div class="cell"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>`;
     const rows = (s.top10 || []).map(p =>
