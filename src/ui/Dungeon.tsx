@@ -7,6 +7,7 @@ import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
 import { DungeonEntry } from "./DungeonEntry";
 import { KeyRitual } from "./KeyRitual";
+import { NemesisInitiative } from "./NemesisInitiative";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
@@ -47,6 +48,8 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : (dungeonId ? dungeonById(dungeonId) : pickDungeon()));
   const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
+  const [pendingNemesis, setPendingNemesis] = useState<Cargado | null>(null);          // némesis esperando su ritual de iniciativa
+  const [nemesisOpenWith, setNemesisOpenWith] = useState<"player" | "enemy" | undefined>(undefined);
   const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
   const [entering, setEntering] = useState(!resume);   // transición de entrada solo en bajadas nuevas
@@ -257,8 +260,15 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     if (springTrapIfAny()) return;
     depth.current += 1; setRoomInStage((r) => r + 1);
     working.current = { ...working.current, energy: working.current.maxEnergy };
-    const nf = nextFight(depth.current, stage); setGroup(nf.enemies); setFightingCargado(nf.cargado); setPhase("fight");
+    beginEncounter(nextFight(depth.current, stage));
   }
+  /** Arranca un encuentro: si es némesis, primero su ritual de iniciativa (sin montar combate). */
+  function beginEncounter(nf: { enemies: Creature[]; cargado: Cargado | null }) {
+    setGroup(nf.enemies); setFightingCargado(nf.cargado);
+    if (nf.cargado) { setPendingNemesis(nf.cargado); }        // ritual primero → luego phase "fight"
+    else { setNemesisOpenWith(undefined); setPhase("fight"); }
+  }
+
   function goCamp() { if (springTrapIfAny()) return; setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function startRest() {
     hpAtCamp.current = working.current.hp; campStart.current = Date.now(); ambushReturn.current = "camp";
@@ -279,7 +289,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     const ns = stage + 1;
     depth.current += 1; setStage(ns); setStageRooms(rollRoomCount()); setRoomInStage(0);
     working.current = { ...working.current, energy: working.current.maxEnergy }; setResting(false);
-    const nf = nextFight(depth.current, ns); setGroup(nf.enemies); setFightingCargado(nf.cargado); setPhase("fight");
+    beginEncounter(nextFight(depth.current, ns));
   }
   function campSpend(k: keyof Characteristics) {
     if (pointsRef.current <= 0) return;
@@ -326,6 +336,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           onDone={() => setEntering(false)}
         />
       )}
+      {pendingNemesis && (
+        <NemesisInitiative
+          cargado={pendingNemesis}
+          onDone={(playerFirst) => { setNemesisOpenWith(playerFirst ? "player" : "enemy"); setPendingNemesis(null); setPhase("fight"); }}
+        />
+      )}
       {keyAlert !== null && (
         <KeyRitual dungeon={tName(dungeon.current.name)} floor={keyAlert} onDone={() => setKeyAlert(null)} />
       )}
@@ -354,7 +370,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       {phase === "fight" && (
         <>
           {fightingCargado && <div className="cargadobanner">☠ {fightingCargado.creature.name} (Nv {fightingCargado.creature.level}) — el némesis que se llevó tu botín. Véncelo para recuperarlo.</div>}
-          <Combat key={`s${stage}r${roomInStage}`} player={wp} enemies={group} potions={potionsRef.current} onEnd={handleCombatEnd} />
+          <Combat key={`s${stage}r${roomInStage}`} player={wp} enemies={group} potions={potionsRef.current} openWith={fightingCargado ? nemesisOpenWith : undefined} onEnd={handleCombatEnd} />
         </>
       )}
 

@@ -33,8 +33,9 @@ const bestAffordable = (c: Creature, pool: number): AbilitySpec | null => {
   return ok.length ? ok.reduce((best, a) => (a.energyCost > best.energyCost ? a : best)) : null;
 };
 
-export function Combat({ player, enemies, potions, onEnd }: {
+export function Combat({ player, enemies, potions, openWith, onEnd }: {
   player: Creature; enemies: Creature[]; potions: number;
+  openWith?: "player" | "enemy";
   onEnd: (r: { survived: boolean; player: Creature; potions: number }) => void;
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
@@ -47,9 +48,9 @@ export function Combat({ player, enemies, potions, onEnd }: {
     const es: Creature[] = enemies.map((e) => ({ ...e, modifiers: [] as Modifier[], energy: e.maxEnergy }));
     const maxE = Math.max(...es.map((e) => e.maxEnergy));
     const groupMax = maxE + (es.length - 1);
-    // iniciativa invisible: 1d6 jugador vs 1d6 enemigos; el mayor abre (empate → jugador)
+    // iniciativa: si viene decidida (némesis, por su ritual 1d20) se respeta; si no, 1d6 vs 1d6
     const d6 = () => 1 + Math.floor(Math.random() * 6);
-    const enemiesOpen = d6() > d6();
+    const enemiesOpen = openWith ? openWith === "enemy" : d6() > d6();
     b.current = {
       player: p, enemies: es, target: 0, potions,
       groupEnergy: groupMax, groupMaxEnergy: groupMax, groupRegen: Math.max(...es.map((e) => e.regen)),
@@ -59,7 +60,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
     };
     const names = es.map((e) => tName(e.name)).join(", ");
     b.current.log.push({ text: es.length > 1 ? t("combat.surround", { n: es.length, names }) : t("combat.appears", { names }), color: "var(--dim)" });
-    if (enemiesOpen) b.current.log.push({ text: t("combat.enemiesFirst"), color: "var(--danger)" });
+    if (enemiesOpen && !openWith) b.current.log.push({ text: t("combat.enemiesFirst"), color: "var(--danger)" });
     enemiesOpenRef.current = enemiesOpen;
   }
 
