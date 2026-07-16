@@ -266,7 +266,7 @@ const DICT: Record<string, Entry> = {
   "stat.abbr.vitality": { es: "VIT", en: "VIT" },
   "stat.abbr.dexterity": { es: "DES", en: "DEX" },
   "stat.abbr.intelligence": { es: "INT", en: "INT" },
-  "stat.desc.strength": { es: "Energía máxima y regeneración por turno (mueves más golpes). También sube el daño de los ataques brutos.", en: "Max energy and regen per turn (more strikes). Also raises the damage of brute attacks." },
+  "stat.desc.strength": { es: "Multiplica el daño de tus golpes con arma: cuanto más fuerte, más pega cada ataque.", en: "Multiplies your weapon damage: the stronger you are, the harder each hit lands." },
   "stat.desc.vitality": { es: "Tu vida máxima. Cuánto castigo aguantas antes de caer.", en: "Your max HP. How much punishment you take before falling." },
   "stat.desc.dexterity": { es: "Precisión al pegar y evasión al esquivar. La velocidad y la mano fina.", en: "Hit accuracy and dodge evasion. Speed and a fine hand." },
   "stat.desc.intelligence": { es: "Precisión al pegar y qué tanto hallas al rebuscar salas. El ojo astuto.", en: "Hit accuracy and how much you find searching rooms. The keen eye." },
