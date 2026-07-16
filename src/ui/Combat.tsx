@@ -39,6 +39,7 @@ export function Combat({ player, enemies, potions, onEnd }: {
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
   const floatId = useRef(0);
+  const enemiesOpenRef = useRef(false);
   const b = useRef<Battle>(null!);
 
   if (b.current === null) {
@@ -46,15 +47,20 @@ export function Combat({ player, enemies, potions, onEnd }: {
     const es: Creature[] = enemies.map((e) => ({ ...e, modifiers: [] as Modifier[], energy: e.maxEnergy }));
     const maxE = Math.max(...es.map((e) => e.maxEnergy));
     const groupMax = maxE + (es.length - 1);
+    // iniciativa invisible: 1d6 jugador vs 1d6 enemigos; el mayor abre (empate → jugador)
+    const d6 = () => 1 + Math.floor(Math.random() * 6);
+    const enemiesOpen = d6() > d6();
     b.current = {
       player: p, enemies: es, target: 0, potions,
       groupEnergy: groupMax, groupMaxEnergy: groupMax, groupRegen: Math.max(...es.map((e) => e.regen)),
       turnPtr: 0, skip: new Set(), guard: 0,
-      phase: "player", log: [], floats: [],
+      phase: enemiesOpen ? "busy" : "player", log: [], floats: [],
       shakePlayer: false, flashPlayer: false, shake: es.map(() => false), flash: es.map(() => false),
     };
     const names = es.map((e) => tName(e.name)).join(", ");
     b.current.log.push({ text: es.length > 1 ? t("combat.surround", { n: es.length, names }) : t("combat.appears", { names }), color: "var(--dim)" });
+    if (enemiesOpen) b.current.log.push({ text: t("combat.enemiesFirst"), color: "var(--danger)" });
+    enemiesOpenRef.current = enemiesOpen;
   }
 
   const pushLog = (text: string, color: string) => { const l = b.current.log; l.push({ text, color }); if (l.length > 7) l.shift(); };
@@ -199,6 +205,11 @@ export function Combat({ player, enemies, potions, onEnd }: {
 
   useEffect(() => {
     const s = b.current;
+    if (enemiesOpenRef.current && s.phase === "busy") {
+      // los enemigos ganaron la iniciativa: abren el combate
+      setTimeout(enemyTurn, 700);
+      return;
+    }
     if (s.phase === "player" && !playerCanAct()) {
       pushLog(t("combat.log.noEnergy", { name: s.player.name }), "var(--muted)");
       ageMods(s.player); s.phase = "busy"; force(); setTimeout(enemyTurn, 900);
