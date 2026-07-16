@@ -25,6 +25,13 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "nemInit.reach": { es: "Un némesis te alcanza", en: "A nemesis reaches you" },
+  "nemInit.initiative": { es: "Iniciativa", en: "Initiative" },
+  "nemInit.you": { es: "Tú", en: "You" },
+  "nemInit.foe": { es: "Némesis", en: "Nemesis" },
+  "nemInit.foeFirst": { es: "{name} embiste primero.", en: "{name} strikes first." },
+  "nemInit.youFirst": { es: "Reaccionas primero.", en: "You react first." },
+  "nemInit.begin": { es: "Que comience el duelo", en: "Let the duel begin" },
   "combat.enemiesFirst": { es: "Fuiste detectado en cuanto abriste la puerta.", en: "You were spotted the moment you opened the door." },
   "energy.next": { es: "Siguiente: {n}", en: "Next: {n}" },
   "energy.cost": { es: "cuesta ◆{c} pts", en: "costs ◆{c} pts" },
