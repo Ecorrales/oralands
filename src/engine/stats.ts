@@ -29,6 +29,6 @@ export function energySpent(energyMax: number): number {
   return total;
 }
 
-export function energyRegen(strength: number, level: number): number {
-  return clamp(Math.trunc(strength / 3) + Math.trunc(level / 20), 2, 6);
+export function energyRegen(level: number): number {
+  return clamp(2 + Math.trunc(level / 15), 2, 6);   // regen ya NO depende de la fuerza; sube suave con el nivel
 }

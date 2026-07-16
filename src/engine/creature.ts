@@ -33,7 +33,7 @@ export interface Creature {
 export function makeCreature(name: string, characteristics: Characteristics, level: number, weapon: Weapon, tags: string[] = []): Creature {
   const maxHp = getHealthForLevel(characteristics.vitality, level);
   const maxEn = ENERGY_BASE;
-  return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(characteristics.strength, level) };
+  return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(level) };
 }
 
 export const hasTag = (c: Creature, tag: string): boolean => (c.tags ?? []).includes(tag);
@@ -42,7 +42,7 @@ export const hasTag = (c: Creature, tag: string): boolean => (c.tags ?? []).incl
 export function recomputeDerived(c: Creature): void {
   c.maxHp = getHealthForLevel(c.characteristics.vitality, c.level);
   // maxEnergy ya NO se deriva de la fuerza: es un stat propio que se sube con puntos. Se respeta.
-  c.regen = energyRegen(c.characteristics.strength, c.level);
+  c.regen = energyRegen(c.level);
   c.hp = Math.min(c.hp, c.maxHp);
   c.energy = Math.min(c.energy, c.maxEnergy);
 }
