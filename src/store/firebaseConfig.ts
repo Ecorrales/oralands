@@ -2,7 +2,6 @@
 // Mientras el apiKey empiece con "TU_", el juego usa localStorage; al pegar el tuyo real,
 // pasa automáticamente a guardar en Firebase.
 export const firebaseConfig = {
- apiKey: "AIzaSyAGWuxt8-fwOcHq-PR1Q80MN5dCIjUxzQ8",
   authDomain: "oralands.firebaseapp.com",
   databaseURL: "https://oralands-default-rtdb.firebaseio.com",
   projectId: "oralands",
