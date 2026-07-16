@@ -461,3 +461,34 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .eb-btn:disabled{opacity:.35;cursor:default}
 .eb-btn:not(:disabled):active{transform:scale(.97)}
 .eb-maxed{font-family:var(--mono);font-size:12px;color:var(--success);text-align:center}
+
+/* ritual de iniciativa contra el némesis (1d20 vs 1d20) */
+.nem-init{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;
+  background:radial-gradient(120% 90% at 50% 40%,#1c1610,#0a0806 70%);animation:niFade .4s ease-out}
+.nem-init.leaving{animation:niOut .3s ease-in forwards}
+@keyframes niFade{from{opacity:0}to{opacity:1}}@keyframes niOut{to{opacity:0}}
+.nem-init::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(50% 42% at 50% 45%,rgba(192,69,58,.10),transparent 70%);animation:niBreathe 3.2s ease-in-out infinite}
+@keyframes niBreathe{0%,100%{opacity:.5}50%{opacity:1}}
+.ni-stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:20px}
+.ni-kicker{font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--danger);text-transform:uppercase;opacity:0;animation:niRise .6s ease-out .1s forwards}
+.ni-name{font-size:25px;font-weight:700;color:var(--ink);line-height:1.25;max-width:14ch;opacity:0;animation:niRise .7s ease-out .35s forwards;text-shadow:0 0 24px rgba(201,162,74,.25)}
+.ni-sub{font-family:var(--mono);font-size:11px;letter-spacing:.28em;color:var(--dim);text-transform:uppercase;opacity:0;animation:niRise .6s ease-out .6s forwards}
+.ni-arena{display:flex;align-items:center;gap:20px;opacity:0;animation:niRise .6s ease-out .9s forwards}
+.ni-side{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:110px}
+.ni-who{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ni-who.you{color:var(--success)}.ni-who.foe{color:var(--danger)}
+.ni-die{width:84px;height:84px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:36px;font-weight:700;
+  background:linear-gradient(160deg,#2a2318,#1a150e);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.5);transition:.2s}
+.ni-die.you{color:var(--success)}.ni-die.foe{color:var(--danger)}
+.ni-die.rolling{animation:niShake .09s linear infinite}
+.ni-die.win{transform:scale(1.08)}
+.ni-die.you.win{border-color:var(--success);box-shadow:0 0 28px rgba(127,174,90,.4)}
+.ni-die.foe.win{border-color:var(--danger);box-shadow:0 0 28px rgba(192,69,58,.45)}
+.ni-die.lose{opacity:.45}
+@keyframes niShake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-2deg)}50%{transform:translate(2px,-1px) rotate(2deg)}75%{transform:translate(-1px,-1px) rotate(-1deg)}}
+.ni-vs{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.1em;align-self:center;margin-top:24px}
+.ni-verdict{font-size:18px;font-weight:600;min-height:26px;opacity:0;transition:opacity .5s;text-shadow:0 0 20px currentColor}
+.ni-verdict.you{color:var(--success)}.ni-verdict.foe{color:var(--danger)}.ni-verdict.show{opacity:1}
+.ni-go{margin-top:6px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:10px;padding:13px 30px;font-size:15px;font-weight:600;cursor:pointer;opacity:0;pointer-events:none;transition:.3s}
+.ni-go.show{opacity:1;pointer-events:auto}.ni-go:active{transform:scale(.97)}
+@keyframes niRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
