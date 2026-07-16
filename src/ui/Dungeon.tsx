@@ -197,14 +197,15 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     if (defeatedBy) {
       // te ganó un némesis que ya existía: sube de nivel ESE mismo (no crea uno nuevo)
       leveledCargado.current = levelUpCargado(defeatedBy, wp.level);
-    } else {
+    } else if (killers.length > 0) {
       const eqId = working.current.weapon.id ?? "";
       const idx = pickStolenIndex(invRef.current, eqId);
       let stolen: WeaponOpt | null = null;
       if (idx >= 0) { stolen = invRef.current[idx]; invRef.current = invRef.current.slice(0, idx).concat(invRef.current.slice(idx + 1)); }
       newCargado.current = graduateCargado(killers, runGoldRef.current, stolen);
     }
-    setOutcome("dead"); setPhase("result");
+    setOutcome("dead");
+    finish("dead");   // sin pantalla de resultado: la muerte lleva directo al ritual del némesis (en el hub)
   }
   function defeatCargado(c: Cargado) {
     defeated.current.push(c.id);
@@ -290,9 +291,9 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   }
   function campEquip(w: WeaponOpt) { working.current = { ...working.current, weapon: toWeapon(w) }; force(); onCheckpoint(buildRun({ phase: "camp", resting })); }
   function leaveDungeon() { setResting(false); setOutcome("won"); setPhase("result"); }
-  function finish() {
+  function finish(outcomeArg?: "won" | "dead") {
     onExit({
-      player: wp, outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
+      player: wp, outcome: outcomeArg ?? outcome, runGold: runGoldRef.current, potions: potionsRef.current, inventory: invRef.current,
       xp: xpRef.current, points: pointsRef.current,
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
       leveledCargado: leveledCargado.current,
@@ -469,7 +470,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             </>
           )}
           <div className="actions" style={{ marginTop: 14 }}>
-            <button className="primary" onClick={finish}>{t("dungeon.returnRefuge")}</button>
+            <button className="primary" onClick={() => finish()}>{t("dungeon.returnRefuge")}</button>
           </div>
         </div>
       )}
