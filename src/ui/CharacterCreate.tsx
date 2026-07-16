@@ -64,7 +64,7 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
       <div className="derived">
         <div className="dcard"><div className="big">{getHealthForLevel(stats.vitality, 1)}</div><div className="lbl">{t("common.maxHp")}</div></div>
         <div className="dcard"><div className="big">{ENERGY_BASE}</div><div className="lbl">{t("common.energyLbl")}</div></div>
-        <div className="dcard"><div className="big">{energyRegen(stats.strength, 1)}</div><div className="lbl">regen ⚡</div></div>
+        <div className="dcard"><div className="big">{energyRegen(1)}</div><div className="lbl">regen ⚡</div></div>
       </div>
 
       <div className="cap">Arma inicial</div>
