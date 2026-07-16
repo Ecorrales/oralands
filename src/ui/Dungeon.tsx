@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { statAbbr, t, tName, abilityName } from "../game/i18n";
 import type { Creature, Characteristics } from "../engine";
-import { getAbility, recomputeDerived } from "../engine";
+import { getAbility, recomputeDerived, ENERGY_MAX, energyRaiseCost } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
 import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
@@ -287,6 +287,15 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     working.current = { ...c, characteristics: { ...c.characteristics, [k]: c.characteristics[k] + 1 } };
     recomputeDerived(working.current);
     pointsRef.current -= 1; force();
+  }
+
+  function campRaiseEnergy() {
+    const c = working.current;
+    if (c.maxEnergy >= ENERGY_MAX) return;
+    const cost = energyRaiseCost(c.maxEnergy);
+    if (pointsRef.current < cost) return;
+    working.current = { ...c, maxEnergy: c.maxEnergy + 1, energy: c.maxEnergy + 1 };
+    pointsRef.current -= cost; force();
     onCheckpoint(buildRun({ phase: "camp", resting }));
   }
   function campEquip(w: WeaponOpt) { working.current = { ...working.current, weapon: toWeapon(w) }; force(); onCheckpoint(buildRun({ phase: "camp", resting })); }
@@ -445,7 +454,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           )}
 
           <div className="cap" style={{ marginTop: 18 }}>{t("dungeon.characteristics")} {pointsRef.current > 0 && <span className="tag">{t("common.ptsTag", { n: pointsRef.current })}</span>}</div>
-          <div className="campblock"><StatsInline player={wp} points={pointsRef.current} onSpend={campSpend} /></div>
+          <div className="campblock"><StatsInline player={wp} points={pointsRef.current} onSpend={campSpend} onRaiseEnergy={campRaiseEnergy} /></div>
 
           <div className="cap" style={{ marginTop: 16 }}>{t("dungeon.inventory")}</div>
           <div className="campblock"><InventoryInline player={wp} inventory={invRef.current} onEquip={campEquip} /></div>

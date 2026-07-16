@@ -25,6 +25,10 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "energy.next": { es: "Siguiente: {n}", en: "Next: {n}" },
+  "energy.cost": { es: "cuesta ◆{c} pts", en: "costs ◆{c} pts" },
+  "energy.raise": { es: "Subir (−{c})", en: "Raise (−{c})" },
+  "energy.maxed": { es: "Energía al máximo", en: "Energy at maximum" },
   "key.rare": { es: "Hallazgo raro", en: "Rare find" },
   "key.body": { es: "Una llave clavada en una puerta olvidada. Ahora puedes comenzar {dungeon} desde el piso {floor}.", en: "A key stuck in a forgotten door. You can now start {dungeon} from floor {floor}." },
   "key.save": { es: "Guardar la llave", en: "Keep the key" },

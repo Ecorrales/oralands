@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  getHealthForLevel, maxEnergy, energyRegen,
+  getHealthForLevel, ENERGY_BASE, energyRaiseCost, energyRegen,
   hitChanceRaw, hitChanceTuned, smashDamage, knockdownChance,
   diceroll, makeCreature, resolveSmash, initiativeOrder,
   ABILITIES, effectiveCharacteristics, pain,
@@ -17,8 +17,10 @@ describe("parity vs Python engine", () => {
     expect(getHealthForLevel(5, 1)).toBe(98);
     expect(getHealthForLevel(8, 1)).toBe(173);
   });
-  it("max energy", () => {
-    expect(maxEnergy(5, 1)).toBe(5);
+  it("energy is its own stat (base 6, incremental cost)", () => {
+    expect(ENERGY_BASE).toBe(6);
+    expect(energyRaiseCost(6)).toBe(1);
+    expect(energyRaiseCost(11)).toBe(6);
   });
   it("energy regen", () => {
     expect(energyRegen(5, 1)).toBe(2);
@@ -73,7 +75,7 @@ describe("creature model", () => {
   it("derives hp/energy from characteristics", () => {
     const c = makeCreature("Aldric", { strength: 5, vitality: 5, dexterity: 5, intelligence: 5 }, 1, { name: "club", damage: "1d4", accuracy: "1d6" });
     expect(c.maxHp).toBe(98);
-    expect(c.maxEnergy).toBe(5);
+    expect(c.maxEnergy).toBe(6);
     expect(c.regen).toBe(2);
   });
   it("initiative orders by dexterity desc", () => {

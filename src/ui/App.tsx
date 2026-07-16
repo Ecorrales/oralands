@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type Creature, type Characteristics, recomputeDerived } from "../engine";
+import { type Creature, type Characteristics, recomputeDerived, ENERGY_BASE, ENERGY_MAX, energyRaiseCost } from "../engine";
 import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState, type AuthInfo } from "../store";
 import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, type WeaponOpt } from "../game/catalog";
 import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
@@ -64,10 +64,14 @@ export function App() {
   // Reponemos los arreglos críticos de cada creatura para no reventar el combate.
   const fixCreature = <C,>(c: C): C => {
     if (c && typeof c === "object") {
-      const cc = c as unknown as { modifiers?: unknown; tags?: unknown; weapon?: { abilities?: unknown } };
+      const cc = c as unknown as { modifiers?: unknown; tags?: unknown; weapon?: { abilities?: unknown }; maxEnergy?: number; energy?: number };
       if (!Array.isArray(cc.modifiers)) cc.modifiers = [];
       if (!Array.isArray(cc.tags)) cc.tags = [];
       if (cc.weapon && !Array.isArray(cc.weapon.abilities)) cc.weapon.abilities = [];
+      // migración de energía: el sistema viejo la ataba a la fuerza (podía ser 63). Ahora es stat propio 6..12.
+      const oldMax = typeof cc.maxEnergy === "number" ? cc.maxEnergy : ENERGY_BASE;
+      cc.maxEnergy = Math.max(ENERGY_BASE, Math.min(ENERGY_MAX, oldMax));
+      cc.energy = Math.min(typeof cc.energy === "number" ? cc.energy : cc.maxEnergy, cc.maxEnergy);
     }
     return c;
   };
@@ -183,6 +187,16 @@ export function App() {
     recomputeDerived(raised);
     const next = derive(raised);
     const np = points - 1;
+    setPlayer(next); setPoints(np); persist(next, gold, potions, inventory, xp, np, cargados);
+  }
+
+  function raiseEnergy() {
+    if (!player || player.maxEnergy >= ENERGY_MAX) return;
+    const cost = energyRaiseCost(player.maxEnergy);   // costo incremental del siguiente punto
+    if (points < cost) return;
+    const raised: Creature = { ...player, maxEnergy: player.maxEnergy + 1, energy: player.maxEnergy + 1 };
+    const next = derive(raised);
+    const np = points - cost;
     setPlayer(next); setPoints(np); persist(next, gold, potions, inventory, xp, np, cargados);
   }
 
@@ -352,7 +366,7 @@ export function App() {
         onUnlockFloor={(dgId, floor) => { const cur = unlockedFloorsRef.current[dgId] ?? []; if (!cur.includes(floor)) { unlockedFloorsRef.current = { ...unlockedFloorsRef.current, [dgId]: [...cur, floor].sort((a, b) => a - b) }; } }}
         onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
-      {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onClose={() => setShowStats(false)} />}
+      {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onRaiseEnergy={raiseEnergy} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
       {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
       {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}

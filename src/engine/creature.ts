@@ -1,5 +1,5 @@
 // Modelo de criatura + stats de combate derivados (con buffs/debuffs activos).
-import { type Characteristics, getHealthForLevel, maxEnergy, energyRegen } from "./stats";
+import { type Characteristics, getHealthForLevel, ENERGY_BASE, energyRegen } from "./stats";
 import { clamp, diceroll, type RNG } from "./dice";
 import type { Modifier } from "./modifiers";
 
@@ -32,7 +32,7 @@ export interface Creature {
 
 export function makeCreature(name: string, characteristics: Characteristics, level: number, weapon: Weapon, tags: string[] = []): Creature {
   const maxHp = getHealthForLevel(characteristics.vitality, level);
-  const maxEn = maxEnergy(characteristics.strength, level);
+  const maxEn = ENERGY_BASE;
   return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(characteristics.strength, level) };
 }
 
@@ -41,7 +41,7 @@ export const hasTag = (c: Creature, tag: string): boolean => (c.tags ?? []).incl
 /** Recalcula stats derivados tras cambiar nivel o características. */
 export function recomputeDerived(c: Creature): void {
   c.maxHp = getHealthForLevel(c.characteristics.vitality, c.level);
-  c.maxEnergy = maxEnergy(c.characteristics.strength, c.level);
+  // maxEnergy ya NO se deriva de la fuerza: es un stat propio que se sube con puntos. Se respeta.
   c.regen = energyRegen(c.characteristics.strength, c.level);
   c.hp = Math.min(c.hp, c.maxHp);
   c.energy = Math.min(c.energy, c.maxEnergy);

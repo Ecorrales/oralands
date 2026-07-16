@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Ritual de Iniciativa · Oralands</title>
+<style>
+  :root{
+    --bg:#14110d; --panel:#1e1a14; --card:#262019; --line:#3a3227;
+    --ink:#e8e0d2; --muted:#9a8f7d; --dim:#6f6656;
+    --accent:#c9a24a; --accent-ink:#1a1509; --danger:#c0453a; --success:#7fae5a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0806;font-family:var(--sans);color:var(--ink);min-height:100vh;
+       display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+  /* overlay del ritual: se apodera de toda la pantalla */
+  .ritual{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 40%,#1c1610 0%,#0a0806 70%);
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+          padding:28px;text-align:center}
+
+  /* niebla/vignette sutil que respira */
+  .ritual::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 50% at 50% 45%,rgba(192,69,58,.10),transparent 70%);
+    animation:breathe 3.2s ease-in-out infinite;pointer-events:none}
+  @keyframes breathe{0%,100%{opacity:.5}50%{opacity:1}}
+
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.32em;color:var(--danger);
+          text-transform:uppercase;opacity:0;animation:rise .6s ease-out .1s forwards}
+  .skull{font-size:30px;opacity:0;animation:rise .6s ease-out forwards;filter:drop-shadow(0 0 12px rgba(192,69,58,.5))}
+  .nemname{font-size:26px;font-weight:700;color:var(--ink);letter-spacing:.01em;line-height:1.25;
+           max-width:14ch;opacity:0;animation:rise .7s ease-out .35s forwards;
+           text-shadow:0 0 24px rgba(201,162,74,.25)}
+  .sub{font-family:var(--mono);font-size:11px;letter-spacing:.28em;color:var(--dim);text-transform:uppercase;
+       opacity:0;animation:rise .6s ease-out .6s forwards}
+
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  /* la arena de dados */
+  .arena{display:flex;align-items:center;gap:20px;opacity:0;animation:rise .6s ease-out .9s forwards}
+  .side{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:120px}
+  .who{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .who.you{color:var(--success)}
+  .who.foe{color:var(--danger)}
+
+  .die{width:88px;height:88px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+       font-family:var(--mono);font-size:38px;font-weight:700;position:relative;
+       background:linear-gradient(160deg,#2a2318,#1a150e);border:1px solid var(--line);
+       box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.5);transition:.2s}
+  .die.you{color:var(--success)}
+  .die.foe{color:var(--danger)}
+  .die.rolling{animation:shake .09s linear infinite}
+  .die.win{transform:scale(1.08)}
+  .die.you.win{border-color:var(--success);box-shadow:0 0 28px rgba(127,174,90,.4),inset 0 1px 0 rgba(255,255,255,.05)}
+  .die.foe.win{border-color:var(--danger);box-shadow:0 0 28px rgba(192,69,58,.45),inset 0 1px 0 rgba(255,255,255,.05)}
+  .die.lose{opacity:.45}
+  @keyframes shake{0%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-2deg)}
+    50%{transform:translate(2px,-1px) rotate(2deg)}75%{transform:translate(-1px,-1px) rotate(-1deg)}}
+
+  .calc{font-family:var(--mono);font-size:11px;color:var(--dim);min-height:14px;transition:.3s}
+  .vs{font-family:var(--mono);font-size:13px;color:var(--dim);letter-spacing:.1em;align-self:center;margin-top:24px}
+
+  .verdict{font-size:18px;font-weight:600;min-height:26px;letter-spacing:.01em;
+           opacity:0;transition:opacity .5s;text-shadow:0 0 20px currentColor}
+  .verdict.you{color:var(--success)}
+  .verdict.foe{color:var(--danger)}
+  .verdict.show{opacity:1}
+
+  .go{margin-top:6px;background:var(--accent);color:var(--accent-ink);border:none;border-radius:10px;
+      padding:13px 30px;font-size:15px;font-weight:600;font-family:var(--sans);cursor:pointer;
+      opacity:0;pointer-events:none;transition:.3s}
+  .go.show{opacity:1;pointer-events:auto}
+  .go:active{transform:scale(.97)}
+
+  .replay{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+          background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+          padding:9px 20px;font-size:12px;font-family:var(--mono);cursor:pointer}
+  .replay:hover{border-color:var(--accent);color:var(--ink)}
+</style>
+</head>
+<body>
+  <div class="ritual" id="ritual">
+    <div class="skull">☠</div>
+    <div class="kicker">Un némesis te alcanza</div>
+    <div class="nemname">Vetusto el Rey Gusano el Mazo</div>
+    <div class="sub">— Iniciativa —</div>
+
+    <div class="arena">
+      <div class="side">
+        <div class="who you">Tú</div>
+        <div class="die you" id="dieYou">–</div>
+        <div class="calc" id="calcYou">1d20 + DES 4</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="side">
+        <div class="who foe">Némesis</div>
+        <div class="die foe" id="dieFoe">–</div>
+        <div class="calc" id="calcFoe">1d20 + DES 4</div>
+      </div>
+    </div>
+
+    <div class="verdict" id="verdict"></div>
+    <button class="go" id="go">Que comience el duelo</button>
+  </div>
+  <button class="replay" id="replay">↻ Ver de nuevo</button>
+
+<script>
+  const DEX_YOU = 4, DEX_FOE = 4;   // ejemplo: mismo modificador; el dado decide
+  const dieYou = document.getElementById("dieYou");
+  const dieFoe = document.getElementById("dieFoe");
+  const calcYou = document.getElementById("calcYou");
+  const calcFoe = document.getElementById("calcFoe");
+  const verdict = document.getElementById("verdict");
+  const go = document.getElementById("go");
+
+  const rnd = () => 1 + Math.floor(Math.random() * 20);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function rollDie(el, finalVal){
+    el.classList.add("rolling");
+    const start = performance.now();
+    // números cambian rápido y van desacelerando
+    let delay = 45;
+    while(performance.now() - start < 1100){
+      el.textContent = rnd();
+      await sleep(delay);
+      delay += 6;
+    }
+    el.classList.remove("rolling");
+    el.textContent = finalVal;
+  }
+
+  async function runRitual(){
+    // reset
+    dieYou.className = "die you"; dieFoe.className = "die foe";
+    dieYou.textContent = "–"; dieFoe.textContent = "–";
+    calcYou.textContent = "1d20 + DES " + DEX_YOU;
+    calcFoe.textContent = "1d20 + DES " + DEX_FOE;
+    verdict.className = "verdict"; verdict.textContent = "";
+    go.className = "go";
+
+    await sleep(1300); // deja que entren el nombre y la etiqueta
+
+    const rYou = rnd(), rFoe = rnd();
+    const totYou = rYou + DEX_YOU, totFoe = rFoe + DEX_FOE;
+
+    // ruedan a la vez
+    await Promise.all([rollDie(dieYou, rYou), rollDie(dieFoe, rFoe)]);
+    calcYou.textContent = `${rYou} + ${DEX_YOU} = ${totYou}`;
+    calcFoe.textContent = `${rFoe} + ${DEX_FOE} = ${totFoe}`;
+
+    await sleep(500);
+
+    // veredicto (empate → gana el jugador, para no castigar de más)
+    const foeFirst = totFoe > totYou;
+    if(foeFirst){
+      dieFoe.classList.add("win"); dieYou.classList.add("lose");
+      verdict.classList.add("foe","show");
+      verdict.textContent = "Vetusto embiste primero.";
+    } else {
+      dieYou.classList.add("win"); dieFoe.classList.add("lose");
+      verdict.classList.add("you","show");
+      verdict.textContent = "Reaccionas primero.";
+    }
+    await sleep(400);
+    go.classList.add("show");
+  }
+
+  go.addEventListener("click", () => { verdict.textContent = "→ (aquí entraría el combate)"; });
+  document.getElementById("replay").addEventListener("click", () => {
+    document.getElementById("ritual").style.animation = "none";
+    runRitual();
+  });
+
+  runRitual();
+</script>
+</body>
+</html>

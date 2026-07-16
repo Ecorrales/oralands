@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Nace un Némesis · Oralands</title>
+<style>
+  :root{
+    --bg:#14110d; --panel:#1e1a14; --card:#262019; --line:#3a3227;
+    --ink:#e8e0d2; --muted:#9a8f7d; --dim:#6f6656;
+    --accent:#c9a24a; --accent-ink:#1a1509; --danger:#c0453a; --success:#7fae5a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#000;font-family:var(--sans);color:var(--ink);min-height:100vh;overflow:hidden}
+
+  .ritual{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:20px;padding:32px;text-align:center;
+          background:radial-gradient(130% 100% at 50% 45%,#160a08 0%,#000 72%)}
+
+  /* pulso rojo que late como una herida */
+  .ritual::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(50% 42% at 50% 48%,rgba(192,69,58,.16),transparent 70%);
+    animation:wound 2.6s ease-in-out infinite}
+  @keyframes wound{0%,100%{opacity:.35;transform:scale(.98)}50%{opacity:1;transform:scale(1.03)}}
+
+  /* motas de ceniza subiendo */
+  .ash{position:absolute;bottom:-10px;width:3px;height:3px;background:#c9a24a;border-radius:50%;opacity:0;
+       animation:rise-ash linear infinite}
+  @keyframes rise-ash{0%{opacity:0;transform:translateY(0)}10%{opacity:.6}100%{opacity:0;transform:translateY(-70vh)}}
+
+  .stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:2}
+
+  .fell{font-family:var(--mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);
+        opacity:0}
+  .fell.in{animation:fade 1s ease-out forwards}
+
+  .rune{font-size:46px;opacity:0;filter:drop-shadow(0 0 18px rgba(192,69,58,.6))}
+  .rune.in{animation:skullRise 1.2s ease-out forwards}
+  @keyframes skullRise{0%{opacity:0;transform:translateY(16px) scale(.7)}
+    60%{opacity:1;transform:translateY(0) scale(1.12)}100%{opacity:1;transform:scale(1)}}
+
+  .rises{font-family:var(--mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--danger);
+         opacity:0}
+  .rises.in{animation:fade .9s ease-out forwards}
+
+  /* el nombre se forma letra por letra */
+  .name{font-size:30px;font-weight:700;line-height:1.25;max-width:15ch;letter-spacing:.01em;
+        min-height:38px;text-shadow:0 0 30px rgba(201,162,74,.35);
+        display:flex;flex-wrap:wrap;gap:0 .32em;align-items:center;justify-content:center}
+  .name .word{display:inline-flex;white-space:nowrap}
+  .name .ch{opacity:0;animation:letter .05s ease-out forwards}
+  @keyframes letter{from{opacity:0;filter:blur(4px)}to{opacity:1;filter:blur(0)}}
+
+  .titleline{font-size:14px;color:var(--muted);font-style:italic;opacity:0;max-width:22ch}
+  .titleline.in{animation:fade 1s ease-out forwards}
+
+  .meta{display:flex;gap:14px;font-family:var(--mono);font-size:12px;color:var(--dim);opacity:0}
+  .meta.in{animation:fade 1s ease-out forwards}
+  .meta b{color:var(--accent)}
+
+  .warn{font-size:12.5px;color:var(--muted);line-height:1.5;max-width:26ch;opacity:0}
+  .warn.in{animation:fade 1.2s ease-out forwards}
+  .warn .steal{color:var(--danger)}
+
+  .go{margin-top:8px;background:transparent;border:1px solid var(--danger);color:#e8a0a0;border-radius:10px;
+      padding:13px 30px;font-size:15px;font-weight:600;cursor:pointer;opacity:0;transition:.2s}
+  .go.in{animation:fade 1s ease-out forwards}
+  .go:hover{background:#2a1416}
+  .go:active{transform:scale(.97)}
+
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .replay{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:5;
+          background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:999px;
+          padding:9px 20px;font-size:12px;font-family:var(--mono);cursor:pointer}
+  .replay:hover{border-color:var(--accent);color:var(--ink)}
+</style>
+</head>
+<body>
+  <div class="ritual" id="ritual">
+    <div class="stage">
+      <div class="fell" id="fell">Has caído en la cripta</div>
+      <div class="rune" id="rune">☠</div>
+      <div class="rises" id="rises">De entre tus verdugos, algo se alza</div>
+      <div class="name" id="name"></div>
+      <div class="titleline" id="titleline">— el no-muerto que empuñó tu propia maza —</div>
+      <div class="meta" id="meta"><span>Nivel <b>5</b></span><span>·</span><span>no-muerto</span></div>
+      <div class="warn" id="warn">Ahora te <span class="steal">acecha</span>. Te robó tu Maza y ◈388.<br>Véncelo para recuperar lo tuyo… si puedes.</div>
+      <button class="go" id="go">Aceptar mi enemigo</button>
+    </div>
+  </div>
+  <button class="replay" id="replay">↻ Ver de nuevo</button>
+
+<script>
+  const NAME = "Vetusto el Rey Gusano el Mazo";
+  const el = (id) => document.getElementById(id);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // motas de ceniza
+  function spawnAsh(){
+    const a = document.createElement("div");
+    a.className = "ash";
+    a.style.left = Math.random()*100 + "%";
+    a.style.animationDuration = (3 + Math.random()*3) + "s";
+    a.style.width = a.style.height = (2 + Math.random()*2) + "px";
+    el("ritual").appendChild(a);
+    setTimeout(() => a.remove(), 6500);
+  }
+  let ashTimer = setInterval(spawnAsh, 220);
+
+  function typeName(str){
+    const box = el("name"); box.innerHTML = "";
+    const words = str.split(" ");
+    let idx = 0;
+    words.forEach((word) => {
+      const w = document.createElement("span");
+      w.className = "word";
+      [...word].forEach((c) => {
+        const s = document.createElement("span");
+        s.className = "ch"; s.textContent = c;
+        s.style.animationDelay = (idx * 0.045) + "s";
+        w.appendChild(s); idx++;
+      });
+      box.appendChild(w);
+    });
+    return idx * 45 + 200;
+  }
+
+  async function run(){
+    ["fell","rune","rises","titleline","meta","warn","go"].forEach(id => el(id).className = el(id).className.replace(" in",""));
+    el("name").innerHTML = "";
+    void el("ritual").offsetWidth; // reflow
+
+    await sleep(500);
+    el("fell").classList.add("in");
+    await sleep(1100);
+    el("rune").classList.add("in");
+    await sleep(1000);
+    el("rises").classList.add("in");
+    await sleep(900);
+    const dur = typeName(NAME);
+    await sleep(dur);
+    el("titleline").classList.add("in");
+    await sleep(700);
+    el("meta").classList.add("in");
+    await sleep(600);
+    el("warn").classList.add("in");
+    await sleep(900);
+    el("go").classList.add("in");
+  }
+
+  el("go").addEventListener("click", () => { el("go").textContent = "→ (vuelves al refugio)"; });
+  el("replay").addEventListener("click", run);
+  run();
+</script>
+</body>
+</html>

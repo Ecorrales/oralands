@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Entrada a Mazmorra · Oralands</title>
+<style>
+  :root{
+    --ink:#e8e0d2; --muted:#9a8f7d; --dim:#6f6656; --accent:#c9a24a;
+    --line:#3a3227; --panel:#1e1a14;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0806;font-family:var(--sans);color:var(--ink);min-height:100vh;
+       display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden}
+
+  /* pantalla "de juego" simulada detrás, para ver el fundido */
+  .fakegame{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+            color:var(--dim);font-family:var(--mono);font-size:13px;letter-spacing:.1em}
+
+  /* overlay de transición */
+  .trans{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         gap:14px;text-align:center;padding:32px;opacity:0;pointer-events:none;z-index:10}
+  .trans.show{opacity:1;pointer-events:auto}
+
+  .trans .glyph{font-size:44px;opacity:0}
+  .trans.play .glyph{animation:glyphIn 1.8s ease-out forwards}
+  @keyframes glyphIn{0%{opacity:0;transform:scale(.8)}25%{opacity:.9;transform:scale(1)}
+    75%{opacity:.9}100%{opacity:0;transform:scale(1.05)}}
+
+  .trans .line{font-size:20px;font-weight:600;letter-spacing:.02em;opacity:0;max-width:18ch;line-height:1.3}
+  .trans.play .line{animation:lineIn 1.8s ease-out forwards}
+  @keyframes lineIn{0%{opacity:0;transform:translateY(8px)}22%{opacity:1;transform:translateY(0)}
+    75%{opacity:1}100%{opacity:0}}
+
+  .trans .floor{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;opacity:0}
+  .trans.play .floor{animation:lineIn 1.8s ease-out .1s forwards}
+
+  /* velos por bioma */
+  .veil{position:absolute;inset:0;z-index:-1}
+  .cripta   .veil{background:radial-gradient(120% 90% at 50% 40%,#1a201c,#080a09 72%)}
+  .madriguera .veil{background:radial-gradient(120% 90% at 50% 40%,#241c12,#0a0705 72%)}
+  .guarida  .veil{background:radial-gradient(120% 90% at 50% 40%,#141a1e,#05080a 72%)}
+  .ruinas   .veil{background:radial-gradient(120% 90% at 50% 40%,#251d0f,#0a0805 72%)}
+
+  .cripta   .glyph,.cripta   .line{color:#a8c0b0;text-shadow:0 0 26px rgba(120,170,150,.4)}
+  .madriguera .glyph,.madriguera .line{color:#c9a878;text-shadow:0 0 26px rgba(160,120,70,.4)}
+  .guarida  .glyph,.guarida  .line{color:#8fb0c9;text-shadow:0 0 26px rgba(90,140,180,.4)}
+  .ruinas   .glyph,.ruinas   .line{color:var(--accent);text-shadow:0 0 30px rgba(201,162,74,.45)}
+  .trans .floor{color:var(--dim)}
+
+  /* partículas ambientales sutiles (polvo/ceniza) */
+  .mote{position:absolute;width:2px;height:2px;border-radius:50%;background:currentColor;opacity:0;bottom:-6px}
+  .cripta .mote{color:#a8c0b0}.madriguera .mote{color:#c9a878}
+  .guarida .mote{color:#8fb0c9}.ruinas .mote{color:var(--accent)}
+
+  /* controles de la demo */
+  .picker{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:20;
+          display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:92vw}
+  .picker button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:9px;
+                 padding:10px 16px;font-size:13px;cursor:pointer;font-family:var(--sans)}
+  .picker button:hover{border-color:var(--accent);color:var(--ink)}
+  .hint{position:fixed;top:22px;left:0;right:0;text-align:center;color:var(--dim);font-size:11px;
+        font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase}
+</style>
+</head>
+<body>
+  <div class="hint">Toca un botón para ver la entrada de cada mazmorra</div>
+  <div class="fakegame" id="fakegame">· sala 1 ·</div>
+
+  <div class="trans" id="trans">
+    <div class="veil"></div>
+    <div class="glyph" id="glyph">✦</div>
+    <div class="line" id="line">Desciendes a la cripta olvidada.</div>
+    <div class="floor" id="floor"></div>
+  </div>
+
+  <div class="picker">
+    <button data-b="cripta">Cripta</button>
+    <button data-b="madriguera">Madriguera</button>
+    <button data-b="guarida">Guarida</button>
+    <button data-b="ruinas">Ruinas</button>
+    <button data-b="ruinas" data-floor="10">Ruinas · con llave (piso 10)</button>
+  </div>
+
+<script>
+  const BIOMES = {
+    cripta:     { glyph:"⚰",  line:"Desciendes a la cripta olvidada.",  game:"· cripta · sala 1 ·" },
+    madriguera: { glyph:"🕳",  line:"Te adentras en los túneles infestados.", game:"· madriguera · sala 1 ·" },
+    guarida:    { glyph:"🐾", line:"Entras a la guarida salvaje.",       game:"· guarida · sala 1 ·" },
+    ruinas:     { glyph:"🏛", line:"Cruzas el umbral de las ruinas profundas.", game:"· ruinas · sala 1 ·" },
+  };
+  const trans = document.getElementById("trans");
+  const glyph = document.getElementById("glyph");
+  const line  = document.getElementById("line");
+  const floor = document.getElementById("floor");
+  const fake  = document.getElementById("fakegame");
+  let moteTimer = null;
+
+  function motes(cls){
+    clearInterval(moteTimer);
+    moteTimer = setInterval(() => {
+      if(!trans.classList.contains("play")) return;
+      const m = document.createElement("div");
+      m.className = "mote";
+      m.style.left = Math.random()*100 + "%";
+      const dur = 1.4 + Math.random()*0.8;
+      m.animate(
+        [{opacity:0, transform:"translateY(0)"},{opacity:.7, offset:.3},{opacity:0, transform:"translateY(-40vh)"}],
+        {duration:dur*1000, easing:"linear"}
+      );
+      trans.appendChild(m);
+      setTimeout(()=>m.remove(), dur*1000+50);
+    }, 90);
+  }
+
+  function play(biome, startFloor){
+    const b = BIOMES[biome];
+    trans.className = "trans " + biome;
+    glyph.textContent = b.glyph;
+    line.textContent = b.line;
+    floor.textContent = startFloor ? ("→ directo al piso " + startFloor) : "";
+    fake.textContent = b.game;
+
+    void trans.offsetWidth;                 // reflow para reiniciar animación
+    trans.classList.add("show","play");
+    motes(biome);
+
+    // la transición dura ~1.8s y se cierra sola (o al tocar)
+    const done = () => { trans.classList.remove("show","play"); clearInterval(moteTimer); trans.removeEventListener("click", done); };
+    trans.addEventListener("click", done);   // saltable con un toque
+    setTimeout(done, 1850);
+  }
+
+  document.querySelectorAll(".picker button").forEach(btn =>
+    btn.addEventListener("click", () => play(btn.dataset.b, btn.dataset.floor))
+  );
+</script>
+</body>
+</html>

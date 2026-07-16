@@ -238,3 +238,155 @@ maxDepth: nivel más profundo llegado — NO retroactivo, se empieza a registrar
 - El JSON debe ser robusto a saves malformados (mismo problema de arrays/objetos vacíos): el script
   valida y salta entradas corruptas.
 - maxDepth: guardar el máximo histórico (Math.max con el actual) por jugador, no la profundidad actual.
+
+## [REFUERZO] Editor de contenido (admin) — cobra fuerza
+Nox reitera que la idea del panel de administración para dar de alta monstruos, ítems, calabozos,
+recetas, etc. (sin código, en Firebase) cobra fuerza conforme crece el contenido. Ver la entrada
+detallada "Editor de contenido con contraseña" más arriba (arquitectura completa ya anotada:
+migrar contenido de código a datos, validación al guardar, reglas por uid admin, fallback offline,
+captura ES/EN). Sigue siendo proyecto de varias sesiones; es el siguiente gran salto estructural.
+
+## Desactivar trampa = mini-juego de destreza
+Idea de Nox: en vez de que rebuscar detecte+desactive automáticamente, que desactivar una trampa
+sea un pequeño juego de habilidad — atinar un botón en el momento justo, una barra que se mueve,
+un QTE (quick-time event), o similar.
+- Convierte el "autocuidado" pasivo (rebuscar) en una interacción activa y tensa.
+- Posible flujo: rebuscas → DETECTAS la trampa (como ahora) → aparece el mini-juego para desactivarla
+  → si atinas, desactivada; si fallas, se dispara (daño). Riesgo/recompensa real.
+- Variantes: barra oscilante con zona verde (timing), secuencia de toques, mantener presionado y soltar.
+- Podría escalar dificultad con el tipo de trampa (man-made de ruinas más difícil que un foso natural).
+- Consideración: debe ser rápido y no frustrante en móvil; el timing debe sentirse justo.
+- Encaja con el sistema de trampas ya existente (traps.ts, detect/trigger, alerta propia).
+
+## Mascota con "IA" y comportamiento seleccionable
+Idea de Nox: una mascota acompañante con comportamiento configurable — el jugador elige si es:
+- AGRESIVA: ataca enemigos por su cuenta (daño extra, pero puede atraer/provocar).
+- PROTECTORA: prioriza defenderte / tankear / curar / interceptar golpes.
+- NORMAL: comportamiento balanceado o pasivo.
+- La "IA" sería heurística (como el modo auto-batalla al tintero): decide acciones según el modo elegido.
+- Consideraciones de diseño (a definir): ¿la mascota tiene su propia energía/turno como el némesis?
+  ¿se consigue/compra/forja? ¿sube de nivel contigo? ¿muere y revive? ¿ocupa una ranura de equipo?
+- Encaja con el motor: las mascotas serían Creatures aliadas; el combate ya maneja múltiples criaturas
+  (el grupo enemigo). Un aliado sería una criatura en el "bando" del jugador que actúa en su fase.
+- Sinergia con el modo auto-batalla IA (al tintero): la misma heurística de EV podría manejar la mascota.
+
+## [REFINADO] Mascota — domar fieras moribundas (tirada d20)
+Nox refinó el origen de las mascotas: NO se compran/forjan, se DOMAN en combate. Diseño:
+- Evento de baja probabilidad: cuando una fiera (ej. lobo) está A PUNTO DE MORIR (HP muy bajo),
+  aparece de repente una opción "Tame / Domar".
+- Al dar click: tirada 1d20 + (DEX o INT del jugador) vs. un umbral por temperamento de la fiera.
+  - Cada fiera, según su temperamento, requiere cierto número resultante para ser domada.
+  - Éxito → la fiera entra a tu party (mascota aliada).
+  - Fracaso → tienes que matarla (sigue el combate, la opción de domar se consume/desaparece).
+- Sabor D&D (d20 + modificador vs. DC). Rolero, tenso, con riesgo real (gastas una acción/turno en intentar).
+
+### Preguntas de diseño a resolver al implementar
+- ¿Qué stat suma, DEX o INT? (¿el jugador elige, o depende de la fiera?) Nox dijo "se le suma dex o int".
+  Posible: INT para domar (voluntad/vínculo) o DEX (manejo). Decidir — quizá el mayor de los dos, o fijo INT.
+- Umbral por temperamento: definir DCs. Ej. dócil DC 8, normal DC 12, feroz DC 16, legendaria DC 18+.
+  El temperamento podría venir del kind/tipo de enemigo o ser un rasgo rolado.
+- "A punto de morir": definir umbral (ej. HP <= 20% del máximo) para que aparezca la opción.
+- Probabilidad base: la opción aparece con baja prob. incluso cumpliendo el HP bajo (para que sea especial).
+- ¿Intentar domar cuesta la acción del turno? (Sí, recomendado — riesgo: fallas y la fiera te pega.)
+- ¿Cuántas mascotas puedes tener? ¿Una activa? ¿Party de varias?
+- La mascota domada: Creature aliada que pelea en tu fase. ¿Su nivel = el de la fiera al domarla?
+  ¿Sube de nivel? ¿Muere permanentemente o se recupera? ¿La pierdes al morir tú?
+- Comportamiento (idea previa): agresiva / protectora / normal — heurística de IA en su turno.
+- Encaja con motor: combate ya maneja múltiples criaturas; la mascota sería aliada en el bando del jugador.
+- Solo fieras/bestias domables? ¿O también alimañas? (No-muertos probablemente no — no tienen voluntad.)
+
+## Forjar toma tiempo real (5 min, "vuelve más tarde")
+Idea de Nox: forjar equipo no es instantáneo — toma tiempo real (ej. 5 minutos), "vuelve en 5 minutos".
+- Reutiliza la mecánica que YA existe: el descanso en campamento recupera vida en tiempo real aunque
+  cierres la app (campStartMs / hpAtCamp con timestamps). Misma idea: guardar timestamp de inicio de forja.
+- Flujo: entregas materiales + oro → la forja empieza → un temporizador cuenta 5 min reales → cuando
+  termina (aunque hayas cerrado la app), reclamas el arma forjada.
+- Consideraciones de diseño:
+  - ¿Una forja a la vez, o varias en paralelo? (Una es más simple y crea decisión: ¿qué forjo primero?)
+  - ¿Los materiales/oro se descuentan AL INICIAR (comprometidos) o al reclamar? (Al iniciar, recomendado —
+    evita exploits y crea compromiso.)
+  - ¿Se puede cancelar? ¿Se devuelven materiales? (Quizá no, o con penalización.)
+  - Persistir en SavedGame: forgeStartMs + qué receta se está forjando (id). Guardas anti-undefined.
+  - UI: la Herrería muestra "Forjando {arma}… listo en 4:32" con cuenta regresiva; al terminar, botón "Reclamar".
+  - ¿El tiempo escala con la calidad del arma? (armas tope tardan más — 5 min básicas, 15-30 min las mejores.)
+  - Da un sink de TIEMPO (no solo oro/materiales) y una razón para volver a la app — engagement loop.
+- Encaja temáticamente: forjar buen acero toma tiempo, no aparece mágicamente.
+- Sinergia: mientras esperas la forja, puedes bajar al calabozo (el tiempo corre en paralelo).
+
+## Rituales — pantallas de momento (full-screen + sonido) para lo importante
+Idea de Nox: pantallas que bloquean TODA la pantalla, con sonido/animación, para hacer sentir
+los momentos más importantes. PRINCIPIO CLAVE (de Nox): "no en todo, solo en lo importante" —
+si se usa de más, pierde impacto; la escasez es lo que las hace especiales.
+
+### Momentos candidatos a "ritual" (los verdaderamente importantes)
+- Nace un némesis (moriste): pantalla oscura, el nombre del némesis se forma letra por letra,
+  sonido grave/siniestro. "☠ {nombre} se alza de entre tus verdugos." Marca que ahora tienes archienemigo.
+- El némesis te vuelve a derrotar y ASCIENDE: "{nombre} ha crecido. Ahora nivel {N}." Tono de amenaza creciente.
+- Encuentras una llave (desbloqueo de piso): destello dorado, sonido de cerradura/campana. Logro raro.
+- Domar una fiera con éxito (si se implementa): la fiera se calma, vínculo, sonido de rugido→ronroneo.
+- Forjar un arma tope / subida de era mayor: martillazos, brasas, el arma emerge.
+- ¿Primera vez que entras a las Ruinas (nivel 10)? Umbral a la mazmorra más peligrosa.
+- ¿Muerte del jugador? (la caída — pantalla de derrota con peso).
+
+### Diseño / consideraciones
+- Full-screen overlay que pausa el juego, se cierra con un toque (o auto tras la animación).
+- Sonido: el juego hoy usa Tone.js? (verificar). Si no, agregar audio ligero (WebAudio/Tone) — sonidos
+  sintetizados, sin archivos pesados, para mantener el PWA liviano. Respetar silencio si el user lo prefiere.
+- Animación: texto que aparece letra por letra, fundidos, destellos. Estética consistente (parchment/brass/oscuro).
+- ESCASEZ = IMPACTO: reservar SOLO para hitos. Un ritual por cada 10-20 min de juego, no por cada sala.
+- Mobile: rápido, saltable con un toque (no atrapar al jugador en una animación larga).
+- Accesibilidad: opción de reducir animaciones / silenciar en settings.
+- Sinergia: varias de estas ya tienen la LÓGICA (némesis nace/asciende, llave, forja) — el ritual es
+  la CAPA DE PRESENTACIÓN encima de eventos que ya ocurren. Bajo riesgo, alto impacto emocional.
+
+## Iniciativa (dado visible) — quién empieza el combate
+[DECISIÓN NOX] El modificador se DESCARTA: la iniciativa es **1d20 puro** (sin sumar DES/INT).
+Razón: la destreza NO escala con profundidad y los no-muertos nunca ganan DES al subir de nivel
+(un no-muerto nivel 20 tiene ~DES 4 igual que uno nivel 1). Con modificador, el jugador casi siempre
+ganaría la iniciativa contra no-muertos y la mecánica perdería gracia. Con 1d20 puro = 50/50 tenso
+contra TODOS los némesis (hasta el tanque lento te puede sorprender). Más simple y legible.
+Empate → gana el jugador (no castigar de más). La demo HTML (ritual-iniciativa-demo.html) ya usa esta lógica.
+Idea de Nox: al iniciar combate (sobre todo vs. némesis), tirar un DADO DE INICIATIVA visible para
+ver quién actúa primero. Empezar siempre el jugador se siente "fácil"; que el rol sea VISIBLE da tensión.
+- Sabor D&D: 1d20 + modificador vs. el del enemigo; el mayor actúa primero.
+- Modificador de iniciativa: DEX (destreza = velocidad de reacción), quizá + algo de INT.
+- VISIBLE: mostrar ambas tiradas (tú 14 vs némesis 17 → el némesis embiste primero). Momento de tensión.
+- Riesgo real: si el némesis gana la iniciativa, te mete su ráfaga ANTES de que reacciones — puede doler.
+
+### Decisiones de diseño
+- ¿En TODOS los combates o SOLO contra némesis? (Nox insinúa que el foco es el némesis. Quizá:
+  enemigos normales el jugador empieza; NÉMESIS tira iniciativa — hace al némesis especial otra vez.)
+  Alternativa: iniciativa en todos, pero el drama visible se reserva para el némesis (sinergia con rituales).
+- Empate: ¿re-tirar, o gana el jugador por defecto?
+- ¿Un solo dado al inicio (quién arranca) o iniciativa por ronda? (Un solo dado al inicio = más simple y
+  suficiente para el drama. Por ronda = más táctico pero más complejo.)  Recomendado: una vez al inicio.
+- Si el enemigo gana: ¿actúa UNA vez antes de cederte el turno, o toda su fase (el némesis encadenaría)?
+  Ojo balance: un némesis que gana iniciativa Y encadena 6 golpes antes de que muevas = brutal. Quizá si
+  gana iniciativa, actúa pero con una acción/energía reducida la primera vez, o solo un golpe de apertura.
+- Presentación: encaja PERFECTO con los rituales — el dado de iniciativa vs. némesis podría ser parte del
+  ritual de encuentro (pantalla, dados rodando, "el némesis se mueve primero"). Sinergia Ola 1 + Ola 3.
+- Motor: el combate ya tiene fases (player/enemy). Iniciativa = decidir qué fase arranca. Cambio contenido.
+
+## Transición de entrada a mazmorra (breve, cada vez)
+Idea de Nox: entrar a cada mazmorra debe tener una transición. OJO: NO es ritual de escasez —
+pasa CADA vez que bajas, así que debe ser BREVE (~1-1.5s) y saltable, atmosférica no épica.
+- Distinta por bioma (cripta/madriguera/guarida/ruinas): color, textura, texto ambiental corto.
+  - Cripta: piedra, frío, "Desciendes a la cripta olvidada." Tono gris-verdoso.
+  - Madriguera: tierra, "Te adentras en los túneles infestados." Tono terroso.
+  - Guarida: cuevas húmedas, "Entras a la guarida salvaje." Tono oscuro-húmedo.
+  - Ruinas: "Cruzas el umbral de las ruinas profundas." Tono más peligroso/dorado apagado.
+- Si entras con LLAVE a un piso alto, la transición podría notarlo: "…directo al piso {N}."
+- Animación: fundido a negro → texto del bioma aparece → fundido a la primera sala. Rápido.
+- Saltable con un toque (para el que baja muchas veces seguidas).
+- Barata técnicamente: overlay que se auto-cierra; se dispara al iniciar la bajada (dungeonId elegido).
+- Contraste con rituales: la entrada es "cortina de teatro" (ambiente), los rituales son "momentos" (escasos).
+
+## [ESTADO] Muestras visuales APROBADAS por Nox (listas para implementar)
+Demos HTML construidas y aprobadas — sirven de plantilla visual para el código real:
+- ritual-nemesis-nace-demo.html — nacimiento del némesis (nombre letra por letra, ceniza, pulso rojo). APROBADO.
+- ritual-iniciativa-demo.html — dados 1d20 (empate=jugador), reveal de quién embiste. APROBADO. Modificador descartado (1d20 puro).
+- ritual-llave-demo.html — llave encontrada (luminoso/logro: halo dorado, rayos girando, llave SVG con destello, chispas). APROBADO (Nox: "la amo"). Data-driven: nombre de mazmorra + piso como variables.
+- trampa-desactivar-demo.html — mini-juego barra de timing, zona verde, 3 dificultades (natural/cripta/ruinas). APROBADO (falta calibrar números finales jugando).
+- entrada-mazmorra-generica-demo.html — transición de entrada GENÉRICA, data-driven (lee name+desc), portal SVG universal, saltable ~2s, detecta piso con llave. APROBADO. Diseño clave: funciona para mazmorras nuevas del admin sin código nuevo.
+Nota: son la CAPA DE PRESENTACIÓN. Al implementar, conectar a la lógica real (combate, traps.ts, graduateCargado, entrada de dungeon).
+Opcional futuro: tint por bioma en la entrada (biome→color con fallback al brass) sin perder genericidad.

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Desactivar Trampa · Oralands</title>
+<style>
+  :root{
+    --bg:#14110d; --panel:#1e1a14; --card:#262019; --line:#3a3227;
+    --ink:#e8e0d2; --muted:#9a8f7d; --dim:#6f6656;
+    --accent:#c9a24a; --accent-ink:#1a1509; --danger:#c0453a; --success:#7fae5a; --warn:#d8a24a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(120% 90% at 50% 20%,#1c1610,#0a0806 70%);font-family:var(--sans);
+       color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .wrap{width:100%;max-width:440px}
+
+  .card{background:var(--card);border:1px solid var(--warn);border-radius:14px;padding:18px;
+        box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .head .icon{font-size:20px}
+  .head .title{color:var(--warn);font-weight:700;font-size:15px;letter-spacing:.02em}
+  .flavor{color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:14px;min-height:36px}
+
+  /* barra de timing */
+  .bar{position:relative;height:34px;background:linear-gradient(180deg,#181410,#221c14);
+       border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:6px}
+  .zone{position:absolute;top:0;bottom:0;background:linear-gradient(180deg,rgba(127,174,90,.35),rgba(127,174,90,.18));
+        border-left:1px solid var(--success);border-right:1px solid var(--success)}
+  .zone::after{content:"";position:absolute;inset:0;box-shadow:0 0 16px rgba(127,174,90,.4) inset}
+  .marker{position:absolute;top:-3px;bottom:-3px;width:4px;background:var(--ink);border-radius:2px;
+          box-shadow:0 0 10px rgba(232,224,210,.7);transition:none}
+  .marker.hit{background:var(--success);box-shadow:0 0 14px rgba(127,174,90,.9)}
+  .marker.miss{background:var(--danger);box-shadow:0 0 14px rgba(192,69,58,.9)}
+  .ticks{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:12px}
+
+  .tapbtn{width:100%;background:var(--accent);color:var(--accent-ink);border:none;border-radius:10px;
+          padding:15px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:.1s;
+          letter-spacing:.03em}
+  .tapbtn:active{transform:scale(.98)}
+  .tapbtn:disabled{opacity:.5;cursor:default}
+
+  .result{text-align:center;font-size:15px;font-weight:600;min-height:24px;margin-top:12px;opacity:0;
+          transition:opacity .35s;text-shadow:0 0 16px currentColor}
+  .result.show{opacity:1}
+  .result.ok{color:var(--success)}
+  .result.bad{color:var(--danger)}
+
+  /* selector de dificultad (solo para la demo) */
+  .demo{margin-top:20px;text-align:center}
+  .demo p{color:var(--dim);font-size:11px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+  .picks{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .pick{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;
+        padding:8px 14px;font-size:12px;cursor:pointer;font-family:var(--sans)}
+  .pick.on{border-color:var(--accent);color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="head"><span class="icon">⚠</span><span class="title" id="tname">Dardos de veneno</span></div>
+    <div class="flavor" id="flavor">Detectas hendiduras en la pared: un mecanismo de dardos. Detén la aguja en la zona segura para trabarlo.</div>
+
+    <div class="bar" id="bar">
+      <div class="zone" id="zone"></div>
+      <div class="marker" id="marker"></div>
+    </div>
+    <div class="ticks"><span>riesgo</span><span>zona segura</span><span>riesgo</span></div>
+
+    <button class="tapbtn" id="tap">Desactivar</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <div class="demo">
+    <p>Prueba las 3 dificultades</p>
+    <div class="picks">
+      <button class="pick on" data-diff="natural">Foso natural (fácil)</button>
+      <button class="pick" data-diff="crypt">Cripta (media)</button>
+      <button class="pick" data-diff="ruins">Ruinas (difícil)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // config por dificultad: zona = ancho de zona verde (%), speed = ms por barrido completo
+  const DIFFS = {
+    natural: { zone: 34, speed: 1500, name: "Foso natural",
+      flavor: "El suelo suena hueco. Detén la aguja en la zona segura para bordearlo con calma." },
+    crypt:   { zone: 22, speed: 1150, name: "Gas de la cripta",
+      flavor: "Un dejo dulzón: gas atrapado. Detén la aguja en la zona segura para sellarlo a tiempo." },
+    ruins:   { zone: 13, speed: 820,  name: "Dardos de veneno",
+      flavor: "Hendiduras en la pared: mecanismo de dardos. Detén la aguja en la zona segura para trabarlo." },
+  };
+
+  const bar = document.getElementById("bar");
+  const zoneEl = document.getElementById("zone");
+  const marker = document.getElementById("marker");
+  const tap = document.getElementById("tap");
+  const result = document.getElementById("result");
+  const tname = document.getElementById("tname");
+  const flavor = document.getElementById("flavor");
+
+  let diff = DIFFS.natural;
+  let zoneStart = 40, zoneW = 34;   // en %
+  let raf = null, startT = 0, running = false;
+
+  function setupRound(){
+    cancelAnimationFrame(raf);
+    running = true;
+    result.className = "result"; result.textContent = "";
+    marker.className = "marker";
+    tap.disabled = false; tap.textContent = "Desactivar";
+    tname.textContent = diff.name;
+    flavor.textContent = diff.flavor;
+
+    zoneW = diff.zone;
+    // posición aleatoria de la zona verde (deja margen a los lados)
+    zoneStart = 6 + Math.random() * (100 - zoneW - 12);
+    zoneEl.style.left = zoneStart + "%";
+    zoneEl.style.width = zoneW + "%";
+
+    startT = performance.now();
+    animate();
+  }
+
+  function pos(now){
+    // barrido triangular 0..100..0 (ida y vuelta) según speed
+    const t = ((now - startT) % diff.speed) / diff.speed;   // 0..1
+    return t < 0.5 ? (t * 2) * 100 : (1 - (t - 0.5) * 2) * 100;
+  }
+
+  function animate(){
+    const now = performance.now();
+    const p = pos(now);
+    marker.style.left = `calc(${p}% - 2px)`;
+    if(running) raf = requestAnimationFrame(animate);
+  }
+
+  function resolve(){
+    if(!running) return;
+    running = false;
+    cancelAnimationFrame(raf);
+    tap.disabled = true;
+    const p = pos(performance.now());
+    const inZone = p >= zoneStart && p <= zoneStart + zoneW;
+    if(inZone){
+      marker.classList.add("hit");
+      result.className = "result ok show";
+      result.textContent = "✓ Trampa desactivada";
+    } else {
+      marker.classList.add("miss");
+      result.className = "result bad show";
+      result.textContent = "✗ ¡Se activó! −" + Math.round(60 * diff.zone/34 + 20) + " vida";
+    }
+    setTimeout(() => { tap.disabled = false; tap.textContent = "Otra vez"; }, 700);
+  }
+
+  tap.addEventListener("click", () => {
+    if(running) resolve();
+    else setupRound();
+  });
+
+  document.querySelectorAll(".pick").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".pick").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    diff = DIFFS[b.dataset.diff];
+    setupRound();
+  }));
+
+  setupRound();
+</script>
+</body>
+</html>
