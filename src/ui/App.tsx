@@ -8,6 +8,7 @@ import { CharacterCreate } from "./CharacterCreate";
 import { AccountBar } from "./AccountBar";
 import { DungeonSelect } from "./DungeonSelect";
 import { StatsPage } from "./StatsPage";
+import { NemesisRitual } from "./NemesisRitual";
 import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
@@ -45,6 +46,7 @@ export function App() {
   const [showForge, setShowForge] = useState(false);
   const [levelMsg, setLevelMsg] = useState<string | null>(null);
   const [cargadoMsg, setCargadoMsg] = useState<string | null>(null);
+  const [nemRitual, setNemRitual] = useState<{ cargado: Cargado; mode: "born" | "ascended" } | null>(null);
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
@@ -309,8 +311,8 @@ export function App() {
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
     await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
     if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
-    if (r.newCargado) setCargadoMsg(`☠ ${r.newCargado.creature.name} se llevó tu botín y ahora te acecha como némesis.`);
-    else if (r.leveledCargado) setCargadoMsg(`☠ ${r.leveledCargado.creature.name} te derrotó de nuevo y ascendió a nivel ${r.leveledCargado.creature.level} — ha crecido desde tu último encuentro.`);
+    if (r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
+    else if (r.leveledCargado) setNemRitual({ cargado: r.leveledCargado, mode: "ascended" });
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
     setScreen("hub");
   }
@@ -323,6 +325,7 @@ export function App() {
         <StatusBar level={player.level} xp={xp} points={points} onOpenStats={() => setShowStats(true)} />
       )}
       {levelMsg && screen === "hub" && <div className="lvlmsg" onClick={() => setLevelMsg(null)}>{levelMsg} <span className="soft">(toca para cerrar)</span></div>}
+      {nemRitual && <NemesisRitual cargado={nemRitual.cargado} mode={nemRitual.mode} onDone={() => setNemRitual(null)} />}
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
       {screen === "loading" && (

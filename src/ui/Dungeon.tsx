@@ -5,6 +5,8 @@ import { getAbility, recomputeDerived } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
 import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
+import { DungeonEntry } from "./DungeonEntry";
+import { KeyRitual } from "./KeyRitual";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
@@ -47,6 +49,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
   const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
+  const [entering, setEntering] = useState(!resume);   // transición de entrada solo en bajadas nuevas
   const [runGold, setRunGold] = useState(resume?.runGold ?? 0);
   const [roomGold, setRoomGold] = useState(resume?.roomGold ?? 0);
   const [roomXp, setRoomXp] = useState(0);
@@ -305,6 +308,17 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 
   return (
     <div>
+      {entering && (
+        <DungeonEntry
+          name={tName(dungeon.current.name)}
+          desc={tName(dungeon.current.desc)}
+          floor={stage}
+          onDone={() => setEntering(false)}
+        />
+      )}
+      {keyAlert !== null && (
+        <KeyRitual dungeon={tName(dungeon.current.name)} floor={keyAlert} onDone={() => setKeyAlert(null)} />
+      )}
       <div className="crawlbar">
         <span>{tName(dungeon.current.short)} · {t("dungeon.stage")} {stage} · {t("dungeon.room")} {Math.min(roomInStage + 1, stageRooms)}/{stageRooms}</span>
         <span className="goldmini">{t("common.lvAbbr")} {wp.level} · ◈ {runGold} <span className="soft">{t("status.unsecured")}</span> · ⚗ {potionsRef.current}</span>
@@ -372,12 +386,6 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
             ) : <div className="nodrop">{t("dungeon.noWeaponHere")}</div>}
           </div>
 
-          {searched && keyAlert && (
-            <div className="keyfound">
-              <div className="keyfound-h">🗝️ {t("dungeon.keyFound")}</div>
-              <div className="keyfound-b">{t("dungeon.keyDesc", { floor: keyAlert, dungeon: tName(dungeon.current.name) })}</div>
-            </div>
-          )}
           {searched && trapAlert && (
             <div className="trapfound">
               <div className="trapfound-h">⚠ {t("dungeon.trapFound")}</div>
