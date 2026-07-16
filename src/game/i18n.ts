@@ -25,6 +25,7 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "combat.enemiesFirst": { es: "Fuiste detectado en cuanto abriste la puerta.", en: "You were spotted the moment you opened the door." },
   "energy.next": { es: "Siguiente: {n}", en: "Next: {n}" },
   "energy.cost": { es: "cuesta ◆{c} pts", en: "costs ◆{c} pts" },
   "energy.raise": { es: "Subir (−{c})", en: "Raise (−{c})" },
