@@ -25,6 +25,20 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "key.rare": { es: "Hallazgo raro", en: "Rare find" },
+  "key.body": { es: "Una llave clavada en una puerta olvidada. Ahora puedes comenzar {dungeon} desde el piso {floor}.", en: "A key stuck in a forgotten door. You can now start {dungeon} from floor {floor}." },
+  "key.save": { es: "Guardar la llave", en: "Keep the key" },
+  "ritual.fell": { es: "Has caído.", en: "You have fallen." },
+  "ritual.rises": { es: "De entre tus verdugos, algo se alza", en: "From among your killers, something rises" },
+  "ritual.bornTitle": { es: "el {kind} que empuñó tu {weapon}", en: "the {kind} that took up your {weapon}" },
+  "ritual.bornTitleNoWeapon": { es: "el {kind} que te dio muerte", en: "the {kind} that slew you" },
+  "ritual.bornWarn": { es: "Ahora te acecha. Te robó tu {weapon} y ◈{gold}.", en: "Now it stalks you. It stole your {weapon} and ◈{gold}." },
+  "ritual.bornWarnNoWeapon": { es: "Ahora te acecha. Se llevó ◈{gold}.", en: "Now it stalks you. It took ◈{gold}." },
+  "ritual.reclaim": { es: "Véncelo para recuperar lo tuyo… si puedes.", en: "Defeat it to reclaim what is yours… if you can." },
+  "ritual.acceptEnemy": { es: "Aceptar a mi enemigo", en: "Accept my enemy" },
+  "ritual.ascendReturns": { es: "ha vuelto por ti.", en: "has returned for you." },
+  "ritual.ascendGrown": { es: "Ha crecido. Ahora es nivel {n}.", en: "It has grown. Now level {n}." },
+  "ritual.face": { es: "Enfrentarlo", en: "Face it" },
   "dungeon.keyFound": { es: "¡Llave encontrada!", en: "Key found!" },
   "dungeon.keyDesc": { es: "Una llave clavada en una puerta. Ahora puedes comenzar {dungeon} desde el piso {floor}.", en: "A key stuck in a door. You can now start {dungeon} from floor {floor}." },
   "select.startFloor": { es: "¿Desde qué piso?", en: "From which floor?" },
