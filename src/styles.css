@@ -377,7 +377,7 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 /* transición de entrada a mazmorra (genérica, data-driven) */
 .dgentry{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:16px;text-align:center;padding:32px;cursor:pointer;
-  background:radial-gradient(120% 90% at 50% 42%,#1b1610,#07060a 74%);animation:dgFade .3s ease-out}
+  background:radial-gradient(120% 90% at 50% 42%,#1b1610,#07060a 74%)}
 .dgentry.leaving{animation:dgOut .26s ease-in forwards}
 @keyframes dgFade{from{opacity:0}to{opacity:1}}
 @keyframes dgOut{from{opacity:1}to{opacity:0}}
