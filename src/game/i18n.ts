@@ -25,6 +25,10 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "potions.capLbl": { es: "Alforja de pociones", en: "Potion pouch" },
+  "potions.capNext": { es: "Ampliar a {n} espacios", en: "Expand to {n} slots" },
+  "potions.capMaxed": { es: "Alforja al máximo (5)", en: "Pouch at maximum (5)" },
+  "shop.slotHint": { es: "Amplía tu alforja con puntos en la pantalla de personaje.", en: "Expand your pouch with points on the character screen." },
   "shop.slotName": { es: "Ampliar alforja de pociones", en: "Expand potion pouch" },
   "shop.slotDesc": { es: "+1 espacio de poción · cuesta ◆{cost} pts", en: "+1 potion slot · costs ◆{cost} pts" },
   "shop.slotMaxed": { es: "Alforja al máximo (5 espacios)", en: "Pouch at maximum (5 slots)" },
