@@ -28,9 +28,45 @@ const movesOf = (c: Creature): AbilitySpec[] => {
   const uniq = ids.filter((id, i) => ids.indexOf(id) === i);
   return uniq.map(getAbility).filter(Boolean) as AbilitySpec[];
 };
-const bestAffordable = (c: Creature, pool: number): AbilitySpec | null => {
-  const ok = movesOf(c).filter((a) => a.energyCost <= pool);
-  return ok.length ? ok.reduce((best, a) => (a.energyCost > best.energyCost ? a : best)) : null;
+// Elige la habilidad a usar.
+//  - nemesis=false (o sin enviar): comportamiento de siempre — el golpe más caro que pueda pagar (codicioso/tonto).
+//  - nemesis=true (requiere target): comportamiento INTELIGENTE — daño esperado (acierto × daño),
+//    remata si un golpe puede matar, y roba turno con aturdir.
+const bestAffordable = (c: Creature, pool: number, nemesis = false, target?: Creature): AbilitySpec | null => {
+  const affordable = movesOf(c).filter((a) => a.energyCost <= pool);
+  if (!affordable.length) return null;
+
+  if (!nemesis || !target) {
+    // modo tonto: el más caro disponible
+    return affordable.reduce((best, a) => (a.energyCost > best.energyCost ? a : best));
+  }
+
+  // modo listo (némesis)
+  const eff = effectiveCharacteristics(c);
+  const teff = effectiveCharacteristics(target);
+  const estAcc = eff.intelligence * (2 * eff.dexterity + 1) + avgDice(c.weapon.accuracy);
+  const estEva = Math.max(0, teff.dexterity * 3.5 + (target.evasionBonus ?? 0));
+  const avgWr = avgDice(c.weapon.damage);
+  const targetStunned = target.modifiers.some((m) => m.kind === "skip");
+
+  const rows = affordable.map((ab) => {
+    const hit = Math.min(97, Math.max(5, hitChanceTuned(estAcc, estEva) + (ab.accMod ?? 0))) / 100;
+    const raw = Math.round(ab.damage(eff, target, avgWr) * (ab.dmgMod ?? 1));
+    const dealt = mitigate(raw, target.defense ?? 0);
+    const stun = ab.effect && ab.effect.name === "knockdown"
+      ? Math.min(100, Math.max(0, ab.effect.chance(eff, target))) / 100 : 0;
+    return { ab, hit, dealt, stun, expected: hit * dealt };
+  });
+  const maxExp = Math.max(...rows.map((r) => r.expected), 1);
+
+  const scored = rows.map((r) => {
+    // Rematador: si el golpe puede MATAR, domina; entre letales gana el de mayor prob. de acertar.
+    if (r.dealt >= target.hp) return { ab: r.ab, score: 100000 + r.hit * 1000 };
+    // Daño esperado + bono de tempo por aturdir (solo si el jugador NO está ya aturdido).
+    const tempo = targetStunned ? 0 : r.stun * maxExp * 0.7;
+    return { ab: r.ab, score: r.expected + tempo };
+  });
+  return scored.reduce((best, s) => (s.score > best.score ? s : best)).ab;
 };
 
 export function Combat({ player, enemies, potions, openWith, onEnd }: {
@@ -152,7 +188,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
       const idx = (s.turnPtr + k) % n; const e = s.enemies[idx];
       if (isDead(e) || s.skip.has(idx)) continue;
       const pool = e.nemesis ? e.energy : s.groupEnergy;   // el némesis usa SU energía; los demás, el pool del grupo
-      const ab = bestAffordable(e, pool);
+      const ab = bestAffordable(e, pool, e.nemesis, s.player);
       if (ab) { actor = idx; ability = ab; break; }
     }
     if (actor < 0 || !ability) return groupDone();
