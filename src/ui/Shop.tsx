@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { statAbbr, slotLabel, tName, abilityName, t } from "../game/i18n";
 import type { Creature } from "../engine";
-import { getAbility } from "../engine";
+import { getAbility, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
 import {
   SHOP_WEAPONS, POTION_PRICE, sellValue, groupWeapons, reqMet, STAT_ES,
   type WeaponOpt,
@@ -19,12 +19,14 @@ const SELL_CATS: { id: SellCat; label: string }[] = [
   { id: "equipo", label: "shop.tabGear" }, { id: "materiales", label: "shop.tabMaterials" },
 ];
 
-export function Shop({ player, gold, potions, inventory, equipped, gear, materials, onBuyPotion, onBuyWeapon, onBuyGear, onSell, onSellAll, onSellGear, onSellMaterial, onSellAllMaterials, onClose }: {
-  player: Creature; gold: number; potions: number; inventory: WeaponOpt[]; equipped: Partial<Record<EquipSlot, string>>; gear: GearItem[]; materials: Mats;
-  onBuyPotion: () => void; onBuyWeapon: (w: WeaponOpt) => void; onBuyGear: (g: GearItem) => void;
+export function Shop({ player, gold, potions, points, inventory, equipped, gear, materials, onBuyPotion, onRaisePotionSlot, onBuyWeapon, onBuyGear, onSell, onSellAll, onSellGear, onSellMaterial, onSellAllMaterials, onClose }: {
+  player: Creature; gold: number; potions: number; points: number; inventory: WeaponOpt[]; equipped: Partial<Record<EquipSlot, string>>; gear: GearItem[]; materials: Mats;
+  onBuyPotion: () => void; onRaisePotionSlot: () => void; onBuyWeapon: (w: WeaponOpt) => void; onBuyGear: (g: GearItem) => void;
   onSell: (id: string) => void; onSellAll: () => void; onSellGear: (id: string) => void; onSellMaterial: (id: string, qty: number) => void; onSellAllMaterials: () => void; onClose: () => void;
 }) {
   const [tab, setTab] = useState<"buy" | "sell">("buy");
+  const cap = player.maxPotions ?? BASE_POTION_SLOTS;
+  const slotCost = potionSlotCost(cap);
   const [sellCat, setSellCat] = useState<SellCat>("general");
   const groups = groupWeapons(inventory);
   const ownedMats = MATERIALS.filter((m) => (materials[m.id] ?? 0) > 0);
@@ -66,8 +68,17 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
             <>
               <div className="baghead">{t("shop.consumables")}</div>
               <div className="shopitem">
-                <div className="invinfo"><b>{t("shop.potionName")} {potions > 0 && <span className="qty">{t("shop.potionHave", { n: potions })}</span>}</b><small>{t("shop.potionDesc")}</small></div>
-                <button className="small" disabled={gold < POTION_PRICE} onClick={onBuyPotion}>◈ {POTION_PRICE}</button>
+                <div className="invinfo"><b>{t("shop.potionName")} <span className="qty">{potions}/{cap}</span></b><small>{t("shop.potionDesc")}</small></div>
+                <button className="small" disabled={gold < POTION_PRICE || potions >= cap} onClick={onBuyPotion}>◈ {POTION_PRICE}</button>
+              </div>
+              <div className="shopitem potionslot">
+                <div className="invinfo">
+                  <b>{t("shop.slotName")}</b>
+                  <small>{cap >= MAX_POTION_SLOTS ? t("shop.slotMaxed") : t("shop.slotDesc", { cost: slotCost })}</small>
+                </div>
+                {cap < MAX_POTION_SLOTS
+                  ? <button className="small" disabled={points < slotCost} onClick={onRaisePotionSlot}>◆ {slotCost}</button>
+                  : <span className="qty">{cap}/{MAX_POTION_SLOTS}</span>}
               </div>
 
               <div className="baghead">{t("shop.tabWeapons")}</div>

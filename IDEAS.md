@@ -390,3 +390,18 @@ Demos HTML construidas y aprobadas — sirven de plantilla visual para el códig
 - entrada-mazmorra-generica-demo.html — transición de entrada GENÉRICA, data-driven (lee name+desc), portal SVG universal, saltable ~2s, detecta piso con llave. APROBADO. Diseño clave: funciona para mazmorras nuevas del admin sin código nuevo.
 Nota: son la CAPA DE PRESENTACIÓN. Al implementar, conectar a la lógica real (combate, traps.ts, graduateCargado, entrada de dungeon).
 Opcional futuro: tint por bioma en la entrada (biome→color con fallback al brass) sin perder genericidad.
+
+## Iniciativa INVISIBLE en combates normales (distinta a la del némesis)
+[CORREGIDO por Nox] En CADA combate normal: se tiran DOS dados 1d6 (uno del jugador, uno de los
+enemigos); el MAYOR empieza el encuentro. AZAR PURO, sin modificador, INVISIBLE (sin pantalla ni dados
+mostrados) — silencioso, no interrumpe el ritmo.
+- Empate (mismo resultado): decidir — sugerencia: gana el jugador (no castigar). A confirmar con Nox.
+- CONTRASTE con el ritual de iniciativa del némesis (ritual-iniciativa-demo.html, APROBADO):
+  - Némesis: 1d20 puro VISIBLE, dados en pantalla, ritual, drama. Solo contra némesis.
+  - Combate normal: 1d6 vs 1d6 INVISIBLE, silencioso, en TODOS los combates.
+  - Coherente con la escasez: el drama (dados visibles + 1d20) se reserva al némesis; lo normal es
+    un tirado rápido y oculto (1d6) que solo decide quién abre.
+- Motor: el combate ya tiene fases player/enemy. La iniciativa decide qué fase corre primero en la ronda 1;
+  luego alternan normal. Cambio contenido (una comparación de dos tiradas al iniciar el combate).
+- ¿"los enemigos" tiran UN dado como grupo, o el dado es del enemigo más fuerte? (Nox: "otro de los
+  enemigos" = un solo 1d6 para el bando enemigo. Asumido: un dado por bando.)

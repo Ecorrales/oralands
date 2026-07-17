@@ -23,8 +23,8 @@ describe("parity vs Python engine", () => {
     expect(energyRaiseCost(11)).toBe(6);
   });
   it("energy regen", () => {
-    expect(energyRegen(5, 1)).toBe(2);
-    expect(energyRegen(9, 1)).toBe(3);
+    expect(energyRegen(1)).toBe(2);
+    expect(energyRegen(60)).toBe(6);
   });
   it("raw hit chance = clamp(acc - eva, 5, 95)", () => {
     expect(hitChanceRaw(30, 10)).toBe(20);

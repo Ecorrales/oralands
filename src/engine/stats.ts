@@ -32,3 +32,12 @@ export function energySpent(energyMax: number): number {
 export function energyRegen(level: number): number {
   return clamp(2 + Math.trunc(level / 15), 2, 6);   // regen ya NO depende de la fuerza; sube suave con el nivel
 }
+
+// Capacidad de pociones: cuántas puedes CARGAR al dungeon. Base 2, máximo 5.
+// Ampliar un slot cuesta puntos: 3er slot = 2 pts, 4º = 4 pts, 5º = 6 pts.
+export const BASE_POTION_SLOTS = 2;
+export const MAX_POTION_SLOTS = 5;
+/** Costo en puntos para ampliar de `current` slots a `current+1` (válido 2..4). */
+export function potionSlotCost(current: number): number {
+  return (current - 1) * 2;   // 2→3:2, 3→4:4, 4→5:6
+}

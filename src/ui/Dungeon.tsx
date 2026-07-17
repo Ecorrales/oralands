@@ -49,6 +49,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
   const [pendingNemesis, setPendingNemesis] = useState<Cargado | null>(null);          // némesis esperando su ritual de iniciativa
+  const [confirmEquip, setConfirmEquip] = useState<WeaponOpt | null>(null);            // confirmación antes de cambiar de arma
   const [nemesisOpenWith, setNemesisOpenWith] = useState<"player" | "enemy" | undefined>(undefined);
   const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
@@ -151,7 +152,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
         let extra = "";
         if (searchFound.current) {
           runGoldRef.current += searchGoldAmt.current; setRunGold(runGoldRef.current);
-          const mats = rollSearchMaterials(enemyKind(group[0] ?? working.current), depth.current);
+          const mats = rollSearchMaterials(enemyKind(group[0] ?? working.current), working.current.level);
           runMats.current = mergeMats(runMats.current, mats);
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
@@ -336,6 +337,30 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           onDone={() => setEntering(false)}
         />
       )}
+      {confirmEquip && (
+        <div className="confirm-overlay" onClick={() => setConfirmEquip(null)}>
+          <div className="confirm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-title">{t("equipConfirm.title")}</div>
+            <div className="confirm-compare">
+              <div className="confirm-w cur">
+                <span className="confirm-lbl">{t("equipConfirm.current")}</span>
+                <b>{tName(wp.weapon.name)}</b>
+                <small>{t("common.damageLbl")}{wp.weapon.damage}</small>
+              </div>
+              <span className="confirm-arrow">→</span>
+              <div className="confirm-w new">
+                <span className="confirm-lbl">{t("equipConfirm.new")}</span>
+                <b>{tName(confirmEquip.name)}</b>
+                <small>{t("common.damageLbl")}{confirmEquip.damage}</small>
+              </div>
+            </div>
+            <div className="confirm-btns">
+              <button className="ghost" onClick={() => setConfirmEquip(null)}>{t("equipConfirm.cancel")}</button>
+              <button className="primary" onClick={() => { equipDrop(confirmEquip); setConfirmEquip(null); }}>{t("equipConfirm.yes")}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {pendingNemesis && (
         <NemesisInitiative
           cargado={pendingNemesis}
@@ -403,7 +428,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
                 <div className="dropinfo"><b>{tName(drop.name)}</b><small>{t("common.damageLbl")}{drop.damage} · {drop.twoHanded ? t("common.twoHandsLong") : t("common.oneHandLong")} · {moveText(drop.abilities)}</small></div>
                 {picked ? <span className="equipped">{equipped ? t("dungeon.equippedTag") : t("dungeon.inBagTag")}</span> : (
                   <div className="dropbtns">
-                    {dropOk && <button className="small" onClick={() => equipDrop(drop)}>{t("common.equipVerb")}</button>}
+                    {dropOk && <button className="small" onClick={() => setConfirmEquip(drop)}>{t("common.equipVerb")}</button>}
                     <button className="small ghost" onClick={() => pickUp(drop)}>{t("dungeon.pickUp")}</button>
                     {!dropOk && <span className="locked">req: {dropReqTxt}</span>}
                   </div>

@@ -1,5 +1,5 @@
 // Modelo de criatura + stats de combate derivados (con buffs/debuffs activos).
-import { type Characteristics, getHealthForLevel, ENERGY_BASE, energyRegen } from "./stats";
+import { type Characteristics, getHealthForLevel, ENERGY_BASE, energyRegen, BASE_POTION_SLOTS } from "./stats";
 import { clamp, diceroll, type RNG } from "./dice";
 import type { Modifier } from "./modifiers";
 
@@ -22,6 +22,7 @@ export interface Creature {
   modifiers: Modifier[];
   hp: number; maxHp: number;
   energy: number; maxEnergy: number; regen: number;
+  maxPotions?: number;                    // capacidad de pociones que puede cargar (2..5), se sube con puntos
   // Derivados del equipo (calculados en la capa de juego; 0/vacío por defecto).
   defense?: number;                       // reduce el daño recibido
   nemesis?: boolean;                       // némesis: pelea como jugador (encadena ataques con su energía)
@@ -33,7 +34,7 @@ export interface Creature {
 export function makeCreature(name: string, characteristics: Characteristics, level: number, weapon: Weapon, tags: string[] = []): Creature {
   const maxHp = getHealthForLevel(characteristics.vitality, level);
   const maxEn = ENERGY_BASE;
-  return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(level) };
+  return { name, characteristics, level, weapon, tags, modifiers: [], hp: maxHp, maxHp, energy: maxEn, maxEnergy: maxEn, regen: energyRegen(level), maxPotions: BASE_POTION_SLOTS };
 }
 
 export const hasTag = (c: Creature, tag: string): boolean => (c.tags ?? []).includes(tag);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type Creature, type Characteristics, recomputeDerived, ENERGY_BASE, ENERGY_MAX, energyRaiseCost } from "../engine";
+import { type Creature, type Characteristics, recomputeDerived, ENERGY_BASE, ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
 import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState, type AuthInfo } from "../store";
 import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, type WeaponOpt } from "../game/catalog";
 import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
@@ -9,6 +9,7 @@ import { AccountBar } from "./AccountBar";
 import { DungeonSelect } from "./DungeonSelect";
 import { StatsPage } from "./StatsPage";
 import { NemesisRitual } from "./NemesisRitual";
+import { UpdatePrompt } from "./UpdatePrompt";
 import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
 import { Dungeon } from "./Dungeon";
@@ -90,8 +91,12 @@ export function App() {
         if (gi) { gr = [gi]; eq = { chest: gi.id }; }
       }
       gearRef.current = gr; equippedRef.current = eq; setGear(gr); setEquipped(eq);
-      setPlayer(derive(g.player, gr, eq));
-      setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));
+      const dp = derive(g.player, gr, eq);
+      // migración de capacidad de pociones: los saves viejos no la tienen → grandfathering según lo que cargaban (tope 5)
+      if (typeof dp.maxPotions !== "number") dp.maxPotions = Math.max(BASE_POTION_SLOTS, Math.min(MAX_POTION_SLOTS, num(g.potions, STARTING_POTIONS)));
+      dp.maxPotions = Math.max(BASE_POTION_SLOTS, Math.min(MAX_POTION_SLOTS, dp.maxPotions));
+      setPlayer(dp);
+      setGold(num(g.gold, 0)); setPotions(Math.min(num(g.potions, STARTING_POTIONS), dp.maxPotions));   // recorta al tope
       setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
       materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
@@ -226,9 +231,23 @@ export function App() {
 
   // ---- tienda ----
   function buyPotion() {
-    if (gold < POTION_PRICE) return;
+    if (gold < POTION_PRICE || !player) return;
+    const cap = player.maxPotions ?? BASE_POTION_SLOTS;
+    if (potions >= cap) return;                       // no exceder la capacidad
     const ng = gold - POTION_PRICE, npo = potions + 1;
     setGold(ng); setPotions(npo); if (player) persist(player, ng, npo, inventory, xp, points, cargados);
+  }
+
+  function raisePotionSlot() {
+    if (!player) return;
+    const cur = player.maxPotions ?? BASE_POTION_SLOTS;
+    if (cur >= MAX_POTION_SLOTS) return;
+    const cost = potionSlotCost(cur);
+    if (points < cost) return;
+    const raised: Creature = { ...player, maxPotions: cur + 1 };
+    const next = derive(raised);
+    const np = points - cost;
+    setPlayer(next); setPoints(np); persist(next, gold, potions, inventory, xp, np, cargados);
   }
   function buyWeapon(w: WeaponOpt) {
     if (gold < w.price) return;
@@ -333,6 +352,7 @@ export function App() {
 
   return (
     <div className="stage">
+      <UpdatePrompt />
       <button className="langtoggle" onClick={toggleLang} title="Language / Idioma">{lang === "es" ? "EN" : "ES"}</button>
       {(screen === "loading" || screen === "create") && <h1 className="title">Dungeon</h1>}
       {player && screen === "hub" && (
@@ -368,7 +388,7 @@ export function App() {
 
       {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onRaiseEnergy={raiseEnergy} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
-      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
+      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onRaisePotionSlot={raisePotionSlot} points={points} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
       {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}
     </div>
   );

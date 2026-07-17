@@ -57,12 +57,20 @@ export function rollRoomMaterials(kind: "undead" | "rodent" | "beast", depth: nu
 }
 
 /** Rebuscar recompensa mejor: más partes de monstruo + a veces escombro extra. */
-export function rollSearchMaterials(kind: "undead" | "rodent" | "beast", depth: number): Mats {
+export function rollSearchMaterials(kind: "undead" | "rodent" | "beast", level: number): Mats {
   const out: Mats = {};
   const add = (id: string, n: number) => { if (n > 0) out[id] = (out[id] ?? 0) + n; };
   const p = partsFor(kind);
+  const debris = ["wood", "steel", "stone"];
+  // base
   add(p[rnd(p.length)], 1 + (Math.random() < 0.4 ? 1 : 0));
-  if (Math.random() < 0.4) { const debris = ["wood", "steel", "stone"]; add(debris[rnd(debris.length)], 1); }
+  if (Math.random() < 0.4) add(debris[rnd(debris.length)], 1);
+  // escalado por nivel: +1 tirada de material por cada 10 niveles (feedback de playtest)
+  const bonus = Math.floor(level / 10);
+  for (let i = 0; i < bonus; i++) {
+    const pool = Math.random() < 0.5 ? p : debris;
+    add(pool[rnd(pool.length)], 1);
+  }
   return out;
 }
 
