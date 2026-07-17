@@ -522,3 +522,8 @@ html { overflow-y: scroll; scrollbar-gutter: stable; }
 .confirm-arrow{align-self:center;color:var(--accent);font-size:18px}
 .confirm-btns{display:flex;gap:8px}
 .confirm-btns button{flex:1}
+
+/* variante de pociones en el apartado tipo energía */
+.eb-val.pot{color:var(--success)}
+.eb-seg.pot.on{background:linear-gradient(180deg,#8fce9a,#5fa06f);border-color:#5fa06f;box-shadow:0 0 6px rgba(143,206,154,.4)}
+.slothint{font-size:11px;color:var(--dim);padding:2px 2px 8px;font-style:italic}
