@@ -1,15 +1,19 @@
 import type { Creature, Characteristics } from "../engine";
-import { ENERGY_MAX, energyRaiseCost } from "../engine";
+import { ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
 import { t, statLabel, statDesc } from "../game/i18n";
 import { STAT_KEYS } from "../game/catalog";
 
-export function StatsInline({ player, points, onSpend, onRaiseEnergy }: {
+export function StatsInline({ player, points, onSpend, onRaiseEnergy, onRaisePotionSlot }: {
   player: Creature; points: number;
   onSpend: (k: keyof Characteristics) => void;
   onRaiseEnergy: () => void;
+  onRaisePotionSlot: () => void;
 }) {
   const cost = energyRaiseCost(player.maxEnergy);
   const maxed = player.maxEnergy >= ENERGY_MAX;
+  const potCap = player.maxPotions ?? BASE_POTION_SLOTS;
+  const potCost = potionSlotCost(potCap);
+  const potMaxed = potCap >= MAX_POTION_SLOTS;
 
   return (
     <>
@@ -44,6 +48,27 @@ export function StatsInline({ player, points, onSpend, onRaiseEnergy }: {
           <div className="eb-raise">
             <span className="eb-next">{t("energy.next", { n: player.maxEnergy + 1 })} · {t("energy.cost", { c: cost })}</span>
             <button className="eb-btn" disabled={points < cost} onClick={onRaiseEnergy}>{t("energy.raise", { c: cost })}</button>
+          </div>
+        )}
+      </div>
+
+      {/* CAPACIDAD DE POCIONES — como la energía: tope 5, se amplía con puntos (costo 2/4/6) */}
+      <div className="energyblock potionblock">
+        <div className="eb-head">
+          <span className="eb-label">{t("potions.capLbl")}</span>
+          <span className="eb-val pot">{potCap} / {MAX_POTION_SLOTS}</span>
+        </div>
+        <div className="eb-bar">
+          {Array.from({ length: MAX_POTION_SLOTS }).map((_, i) => (
+            <span key={i} className={"eb-seg pot" + (i < potCap ? " on" : "")} />
+          ))}
+        </div>
+        {potMaxed ? (
+          <div className="eb-maxed">{t("potions.capMaxed")}</div>
+        ) : (
+          <div className="eb-raise">
+            <span className="eb-next">{t("potions.capNext", { n: potCap + 1 })} · {t("energy.cost", { c: potCost })}</span>
+            <button className="eb-btn" disabled={points < potCost} onClick={onRaisePotionSlot}>{t("energy.raise", { c: potCost })}</button>
           </div>
         )}
       </div>

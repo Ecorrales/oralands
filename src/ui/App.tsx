@@ -386,9 +386,9 @@ export function App() {
         onUnlockFloor={(dgId, floor) => { const cur = unlockedFloorsRef.current[dgId] ?? []; if (!cur.includes(floor)) { unlockedFloorsRef.current = { ...unlockedFloorsRef.current, [dgId]: [...cur, floor].sort((a, b) => a - b) }; } }}
         onCheckpoint={onCheckpoint} onExit={handleRunEnd} />}
 
-      {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onRaiseEnergy={raiseEnergy} onClose={() => setShowStats(false)} />}
+      {showStats && player && <StatsPanel player={player} points={points} onSpend={spendPoint} onRaiseEnergy={raiseEnergy} onRaisePotionSlot={raisePotionSlot} onClose={() => setShowStats(false)} />}
       {showEquip && player && <EquipPanel player={player} gear={gear} equipped={equipped} onEquip={equipGear} onUnequip={unequipSlot} onClose={() => setShowEquip(false)} />}
-      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onRaisePotionSlot={raisePotionSlot} points={points} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
+      {showShop && player && <Shop player={player} gold={gold} potions={potions} inventory={inventory} equipped={equipped} gear={gear} materials={materials} onBuyPotion={buyPotion} onBuyWeapon={buyWeapon} onBuyGear={buyGear} onSell={sellWeapon} onSellAll={sellDuplicates} onSellGear={sellGear} onSellMaterial={sellMaterial} onSellAllMaterials={sellAllMaterials} onClose={() => setShowShop(false)} />}
       {showForge && player && <Forge player={player} gold={gold} materials={materials} onForge={forgeItem} onClose={() => setShowForge(false)} />}
     </div>
   );
