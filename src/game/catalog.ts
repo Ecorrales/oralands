@@ -55,6 +55,11 @@ export const toWeapon = (o: WeaponOpt): Weapon => ({ id: o.id, name: o.name, dam
 
 // Utilizables
 export const STARTING_POTIONS = 2;
+
+// Umbral de "despertar" del sistema de némesis. Antes de este nivel, los némesis son MENORES:
+// no suben de nivel, no empuñan tu arma robada, solo tienen nombre (sin sobrenombre de arma),
+// no disparan rituales y pelean con IA boba. No son especiales... todavía.
+export const NEMESIS_AWAKEN_LEVEL = 22;
 export const POTION_HEAL_FRACTION = 0.4; // cura 40% de la vida máx, al instante
 export const POTION_COST = 2;             // energía que cuesta beber (compite con atacar)
 

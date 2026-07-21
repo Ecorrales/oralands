@@ -13,6 +13,14 @@ export interface Cargado {
   weapon: WeaponOpt | null;  // arma que te robó (se te devuelve al vencerlo)
   kindLabel: string;
   xp?: number;               // XP acumulada hacia su siguiente nivel (crece al ganarte)
+  home?: string;             // guarida: dungeonId donde nació. Solo acecha AHÍ (territorial).
+}
+
+// Guarida "natural" por tipo, para migrar némesis viejos sin `home` registrado.
+const KIND_HOME: Record<string, string> = { "no-muerto": "cripta", "alimaña": "madriguera", "bestia": "guarida" };
+/** Resuelve la guarida de un némesis (su `home`, o un fallback por su tipo para los legacy). */
+export function cargadoHome(c: Cargado): string {
+  return c.home ?? KIND_HOME[c.kindLabel] ?? "cripta";
 }
 
 export const MAX_CARGADOS = 6;
@@ -68,21 +76,22 @@ export function levelUpCargado(prev: Cargado, playerLevel: number): Cargado {
 }
 
 /** Gradúa a un cargado a partir del grupo que te mató. */
-export function graduateCargado(killers: Creature[], gold: number, stolen: WeaponOpt | null): Cargado {
+export function graduateCargado(killers: Creature[], gold: number, stolen: WeaponOpt | null, home: string, awakened: boolean): Cargado {
   // el más fuerte del grupo (más vida) se lleva el crédito
   const base = killers.reduce((a, b) => (b.maxHp > a.maxHp ? b : a));
   const kind = enemyKind(base);
   const c: Creature = { ...base, characteristics: { ...base.characteristics }, tags: [...base.tags], weapon: { ...base.weapon }, modifiers: [], nemesis: true };
   c.level += 1;                 // sube de nivel al graduarse
-  if (stolen) {
-    // el némesis EMPUÑA el arma que te robó — su título ya lo anuncia, ahora pelea así
+  if (awakened && stolen) {
+    // solo un némesis DESPIERTO (jugador nv22+) empuña el arma que te robó
     const w: Weapon = { id: stolen.id, name: stolen.name, damage: stolen.damage, accuracy: stolen.accuracy, abilities: [...stolen.abilities] };
     if (stolen.twoHanded) w.twoHanded = true;
     c.weapon = w;
   }
   recomputeDerived(c);
   c.hp = c.maxHp; c.energy = c.maxEnergy;
-  c.name = `${nameFor(kind)} ${titleFor(stolen)}`;
+  // sobrenombre de arma SOLO si está despierto; el menor lleva solo su nombre
+  c.name = awakened ? `${nameFor(kind)} ${titleFor(stolen)}` : nameFor(kind);
   const label = kind === "undead" ? "no-muerto" : kind === "rodent" ? "alimaña" : "bestia";
-  return { id: `c${Date.now()}${Math.floor(Math.random() * 1000)}`, creature: c, gold, weapon: stolen, kindLabel: label };
+  return { id: `c${Date.now()}${Math.floor(Math.random() * 1000)}`, creature: c, gold, weapon: awakened ? stolen : null, kindLabel: label, home };
 }
