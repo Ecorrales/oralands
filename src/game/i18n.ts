@@ -25,6 +25,7 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "select.nemesisWaits": { es: "{name} te acecha aquí", en: "{name} lurks here" },
   "sell.confirmMats": { es: "¿Vender TODOS tus materiales por ◈{n}? Esto no se puede deshacer.", en: "Sell ALL your materials for ◈{n}? This can't be undone." },
   "sell.confirmDupes": { es: "¿Vender todas las armas repetidas por ◈{n}?", en: "Sell all duplicate weapons for ◈{n}?" },
   "select.nemesisHere": { es: "Aquí te acecha un némesis", en: "A nemesis lurks here" },
