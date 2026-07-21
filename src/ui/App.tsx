@@ -393,7 +393,7 @@ export function App() {
       {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
       {screen === "stats" && <StatsPage onBack={() => setScreen("hub")} />}
       {screen === "dungeonSelect" && player && (
-        <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} nemesisDungeons={new Set(cargados.map(cargadoHome))} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
+        <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} nemesisNames={Object.fromEntries(cargados.map((c) => [cargadoHome(c), c.creature.name]))} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
       )}
       {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} dungeonId={chosenDungeon} startStage={chosenFloor} unlockedFloors={unlockedFloorsRef.current}
         onUnlockFloor={(dgId, floor) => { const cur = unlockedFloorsRef.current[dgId] ?? []; if (!cur.includes(floor)) { unlockedFloorsRef.current = { ...unlockedFloorsRef.current, [dgId]: [...cur, floor].sort((a, b) => a - b) }; } }}

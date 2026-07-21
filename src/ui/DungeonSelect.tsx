@@ -5,10 +5,10 @@ import { t, tName } from "../game/i18n";
 const DIF_COLOR: Record<string, string> = { easy: "#7fae5a", moderate: "#c9a24a", hard: "#d67c3a", lethal: "#c0453a" };
 
 /** Selección de mazmorra + piso de entrada. Difíciles bloqueadas por nivel; pisos por llaves. */
-export function DungeonSelect({ level, unlockedFloors, nemesisDungeons, onPick, onBack }: {
+export function DungeonSelect({ level, unlockedFloors, nemesisNames, onPick, onBack }: {
   level: number;
   unlockedFloors: Record<string, number[]>;
-  nemesisDungeons?: Set<string>;
+  nemesisNames?: Record<string, string>;
   onPick: (dungeonId: string, floor: number) => void;
   onBack: () => void;
 }) {
@@ -39,7 +39,6 @@ export function DungeonSelect({ level, unlockedFloors, nemesisDungeons, onPick, 
               >
                 <div className="dcard-top">
                   <span className="dcard-name">{tName(d.name)}</span>
-                  {nemesisDungeons?.has(d.id) && <span className="dcard-nemesis" title={t("select.nemesisHere")} style={{ color: "#b06fe3", marginLeft: 6 }}>{"\u2620\uFE0E"}</span>}
                   {!unlocked && <span className="dcard-lock">🔒 {t("common.lvAbbr")} {d.minLevel}</span>}
                   {unlocked && floors.length > 1 && <span className="dcard-lock">🗝️ {floors.length - 1}</span>}
                 </div>
@@ -47,6 +46,12 @@ export function DungeonSelect({ level, unlockedFloors, nemesisDungeons, onPick, 
                 <div className="dcard-dif" style={{ color: DIF_COLOR[difficultyOf(d.minLevel)], fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".04em", marginTop: 6 }}>
                   {t("select.dif." + difficultyOf(d.minLevel))} · {t("common.lvAbbr")} {d.minLevel}+
                 </div>
+                {nemesisNames?.[d.id] && (
+                  <div className="dcard-nemesis" style={{ color: "#b06fe3", fontSize: 13.5, fontWeight: 600, marginTop: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 16 }}>{"\u2620\uFE0E"}</span>
+                    {t("select.nemesisWaits", { name: nemesisNames[d.id] })}
+                  </div>
+                )}
               </button>
               {isOpen && (
                 <div style={{ padding: "4px 4px 10px" }}>
