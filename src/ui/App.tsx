@@ -9,6 +9,8 @@ import { AccountBar } from "./AccountBar";
 import { DungeonSelect } from "./DungeonSelect";
 import { StatsPage } from "./StatsPage";
 import { NemesisRitual } from "./NemesisRitual";
+import { ScrollTutorial } from "./ScrollTutorial";
+import { UmbralRitual } from "./UmbralRitual";
 import { UpdatePrompt } from "./UpdatePrompt";
 import { getLang, setLang, t, type Lang } from "../game/i18n";
 import { Hub } from "./Hub";
@@ -48,6 +50,8 @@ export function App() {
   const [levelMsg, setLevelMsg] = useState<string | null>(null);
   const [cargadoMsg, setCargadoMsg] = useState<string | null>(null);
   const [nemRitual, setNemRitual] = useState<{ cargado: Cargado; mode: "born" | "ascended" } | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showUmbral, setShowUmbral] = useState(false);
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
@@ -169,6 +173,7 @@ export function App() {
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
     setScreen("hub");
+    setShowTutorial(true);   // ritual de bienvenida (pergamino del guardián)
     try { await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); }
     catch (e) { console.error("No se pudo guardar la partida:", e); }
   }
@@ -344,8 +349,11 @@ export function App() {
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
     await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
     if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
-    const awakened = (player?.level ?? 0) >= NEMESIS_AWAKEN_LEVEL;
-    if (awakened && r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
+    const oldLevel = player?.level ?? 0;
+    const crossedUmbral = oldLevel < NEMESIS_AWAKEN_LEVEL && next.level >= NEMESIS_AWAKEN_LEVEL;
+    const awakened = next.level >= NEMESIS_AWAKEN_LEVEL;
+    if (crossedUmbral) setShowUmbral(true);   // el gran momento: el mundo despierta a tu nombre
+    else if (awakened && r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
     else if (awakened && r.leveledCargado) setNemRitual({ cargado: r.leveledCargado, mode: "ascended" });
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
     setScreen("hub");
@@ -361,6 +369,8 @@ export function App() {
       )}
       {levelMsg && screen === "hub" && <div className="lvlmsg" onClick={() => setLevelMsg(null)}>{levelMsg} <span className="soft">(toca para cerrar)</span></div>}
       {nemRitual && <NemesisRitual cargado={nemRitual.cargado} mode={nemRitual.mode} onDone={() => setNemRitual(null)} />}
+      {showTutorial && <ScrollTutorial onDone={() => setShowTutorial(false)} />}
+      {showUmbral && <UmbralRitual onDone={() => setShowUmbral(false)} />}
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
       {screen === "loading" && (
