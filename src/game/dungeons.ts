@@ -16,11 +16,20 @@ export interface DungeonType {
 }
 
 export const DUNGEON_TYPES: DungeonType[] = [
-  { id: "cripta",     name: "Cripta olvidada",      short: "Cripta",     desc: "Pasillos de piedra tomados por los no-muertos.",        kinds: ["undead"],                     biome: "cripta",     minLevel: 1 },
   { id: "madriguera", name: "Madriguera infestada", short: "Madriguera", desc: "Túneles de tierra donde pululan las alimañas.",         kinds: ["rodent"],                     biome: "madriguera", minLevel: 1 },
+  { id: "cripta",     name: "Cripta olvidada",      short: "Cripta",     desc: "Pasillos de piedra tomados por los no-muertos.",        kinds: ["undead"],                     biome: "cripta",     minLevel: 3 },
   { id: "guarida",    name: "Guarida salvaje",      short: "Guarida",    desc: "Cuevas húmedas donde acechan las bestias.",             kinds: ["beast"],                      biome: "cueva",      minLevel: 6 },
   { id: "ruinas",     name: "Ruinas profundas",     short: "Ruinas",     desc: "Ruinas antiguas donde se mezclan todas las amenazas.",  kinds: ["undead", "rodent", "beast"],  biome: "ruinas",     minLevel: 10 },
 ];
+
+/** Nivel de dificultad derivado del nivel mínimo de entrada. */
+export type DifficultyTier = "easy" | "moderate" | "hard" | "lethal";
+export function difficultyOf(minLevel: number): DifficultyTier {
+  if (minLevel <= 2) return "easy";
+  if (minLevel <= 5) return "moderate";
+  if (minLevel <= 9) return "hard";
+  return "lethal";
+}
 
 /** Elige un calabozo al azar con probabilidad pareja (1/N). */
 export const pickDungeon = (): DungeonType =>
