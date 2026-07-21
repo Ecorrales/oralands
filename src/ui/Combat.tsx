@@ -4,7 +4,7 @@ import {
   resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics, hitChanceTuned,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
 } from "../engine";
-import { POTION_HEAL_FRACTION, POTION_COST } from "../game/catalog";
+import { POTION_HEAL_FRACTION, POTION_COST, NEMESIS_AWAKEN_LEVEL } from "../game/catalog";
 import { EnemySprite } from "./EnemySprite";
 import { enemyKind } from "../game/enemies";
 
@@ -28,20 +28,15 @@ const movesOf = (c: Creature): AbilitySpec[] => {
   const uniq = ids.filter((id, i) => ids.indexOf(id) === i);
   return uniq.map(getAbility).filter(Boolean) as AbilitySpec[];
 };
-// Elige la habilidad a usar.
-//  - nemesis=false (o sin enviar): comportamiento de siempre — el golpe más caro que pueda pagar (codicioso/tonto).
-//  - nemesis=true (requiere target): comportamiento INTELIGENTE — daño esperado (acierto × daño),
-//    remata si un golpe puede matar, y roba turno con aturdir.
-const bestAffordable = (c: Creature, pool: number, nemesis = false, target?: Creature): AbilitySpec | null => {
-  const affordable = movesOf(c).filter((a) => a.energyCost <= pool);
-  if (!affordable.length) return null;
+const affordableMoves = (c: Creature, pool: number): AbilitySpec[] =>
+  movesOf(c).filter((a) => a.energyCost <= pool);
 
-  if (!nemesis || !target) {
-    // modo tonto: el más caro disponible
-    return affordable.reduce((best, a) => (a.energyCost > best.energyCost ? a : best));
-  }
+// TONTO: el golpe más caro que pueda pagar (enemigos normales).
+const pickGreedy = (moves: AbilitySpec[]): AbilitySpec =>
+  moves.reduce((best, a) => (a.energyCost > best.energyCost ? a : best));
 
-  // modo listo (némesis)
+// LISTO (némesis): daño esperado (acierto × daño), remata si un golpe puede matar, y roba turno con aturdir.
+const pickSmart = (c: Creature, moves: AbilitySpec[], target: Creature): AbilitySpec => {
   const eff = effectiveCharacteristics(c);
   const teff = effectiveCharacteristics(target);
   const estAcc = eff.intelligence * (2 * eff.dexterity + 1) + avgDice(c.weapon.accuracy);
@@ -49,7 +44,7 @@ const bestAffordable = (c: Creature, pool: number, nemesis = false, target?: Cre
   const avgWr = avgDice(c.weapon.damage);
   const targetStunned = target.modifiers.some((m) => m.kind === "skip");
 
-  const rows = affordable.map((ab) => {
+  const rows = moves.map((ab) => {
     const hit = Math.min(97, Math.max(5, hitChanceTuned(estAcc, estEva) + (ab.accMod ?? 0))) / 100;
     const raw = Math.round(ab.damage(eff, target, avgWr) * (ab.dmgMod ?? 1));
     const dealt = mitigate(raw, target.defense ?? 0);
@@ -67,6 +62,16 @@ const bestAffordable = (c: Creature, pool: number, nemesis = false, target?: Cre
     return { ab: r.ab, score: r.expected + tempo };
   });
   return scored.reduce((best, s) => (s.score > best.score ? s : best)).ab;
+};
+
+// Punto de entrada ÚNICO para elegir movimiento.
+//  - sin `smart`  → comportamiento tonto (el más caro).
+//  - con `smart: { target }` → cerebro de némesis. El `target` es OBLIGATORIO por el tipo:
+//    no se puede pedir "listo" sin a quién mirar, así que el acoplamiento queda blindado en compilación.
+const bestAffordable = (c: Creature, pool: number, smart?: { target: Creature }): AbilitySpec | null => {
+  const moves = affordableMoves(c, pool);
+  if (!moves.length) return null;
+  return smart ? pickSmart(c, moves, smart.target) : pickGreedy(moves);
 };
 
 export function Combat({ player, enemies, potions, openWith, onEnd }: {
@@ -188,7 +193,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
       const idx = (s.turnPtr + k) % n; const e = s.enemies[idx];
       if (isDead(e) || s.skip.has(idx)) continue;
       const pool = e.nemesis ? e.energy : s.groupEnergy;   // el némesis usa SU energía; los demás, el pool del grupo
-      const ab = bestAffordable(e, pool, e.nemesis, s.player);
+      const ab = bestAffordable(e, pool, (e.nemesis && s.player.level >= NEMESIS_AWAKEN_LEVEL) ? { target: s.player } : undefined);
       if (ab) { actor = idx; ability = ab; break; }
     }
     if (actor < 0 || !ability) return groupDone();

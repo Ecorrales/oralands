@@ -11,8 +11,8 @@ import { NemesisInitiative } from "./NemesisInitiative";
 import { rollRoomMaterials, rollSearchMaterials, mergeMats, matsSummary, matIcon, matName, type Mats } from "../game/materials";
 import { goldForEnemy, goldDropChance, rollWeaponDrop, rollNoGoldLine } from "../game/loot";
 import { xpForEnemy, gainXp, POINTS_PER_LEVEL } from "../game/progression";
-import { reqMet, STAT_ES, toWeapon, type WeaponOpt } from "../game/catalog";
-import { graduateCargado, levelUpCargado, pickStolenIndex, type Cargado } from "../game/cargados";
+import { reqMet, STAT_ES, toWeapon, type WeaponOpt, NEMESIS_AWAKEN_LEVEL } from "../game/catalog";
+import { graduateCargado, levelUpCargado, pickStolenIndex, cargadoHome, type Cargado } from "../game/cargados";
 import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, searchOutcome, searchIntro } from "../game/search";
 import type { RunState } from "../store/PlayerStore";
 import { Combat } from "./Combat";
@@ -80,7 +80,11 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const ambushAt = useRef<number | null>(resume?.ambushAtSec ?? null);
   const stalker = useRef<Cargado | null>(
     resume ? (resume.stalkerId ? cargados.find((c) => c.id === resume.stalkerId) ?? null : null)
-           : (cargados.length ? cargados[Math.floor(Math.random() * cargados.length)] : null)
+           : (() => {
+               // TERRITORIAL: solo acechan los némesis cuya guarida es ESTA mazmorra
+               const locals = cargados.filter((c) => cargadoHome(c) === dungeon.current.id);
+               return locals.length ? locals[Math.floor(Math.random() * locals.length)] : null;
+             })()
   );
   const newCargado = useRef<Cargado | null>(null);
   const leveledCargado = useRef<Cargado | null>(null);
@@ -157,12 +161,6 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
         if (roomTrap.current) { setTrapAlert(tName(roomTrap.current.detect)); roomTrap.current = null; }
-        // LLAVE DE PROFUNDIDAD: última sala de un piso múltiplo de 5, 35% al rebuscar
-        const dgId = dungeon.current.id;
-        const already = (unlockedFloors?.[dgId] ?? []).includes(stage);
-        if (stage % 5 === 0 && roomInStage + 1 >= stageRooms && !already && Math.random() < 0.35) {
-          onUnlockFloor?.(dgId, stage); setKeyAlert(stage);
-        }
         setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
@@ -198,15 +196,25 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     }
   }
   function onDeath(killers: Creature[], defeatedBy: Cargado | null) {
+    const awakened = wp.level >= NEMESIS_AWAKEN_LEVEL;
     if (defeatedBy) {
-      // te ganó un némesis que ya existía: sube de nivel ESE mismo (no crea uno nuevo)
-      leveledCargado.current = levelUpCargado(defeatedBy, wp.level);
+      // te ganó un némesis que ya existía: sube de nivel ESE mismo — pero solo si el sistema está despierto (nv22+)
+      if (awakened) leveledCargado.current = levelUpCargado(defeatedBy, wp.level);
     } else if (killers.length > 0) {
-      const eqId = working.current.weapon.id ?? "";
-      const idx = pickStolenIndex(invRef.current, eqId);
-      let stolen: WeaponOpt | null = null;
-      if (idx >= 0) { stolen = invRef.current[idx]; invRef.current = invRef.current.slice(0, idx).concat(invRef.current.slice(idx + 1)); }
-      newCargado.current = graduateCargado(killers, runGoldRef.current, stolen);
+      // LÍMITE TERRITORIAL: si esta mazmorra YA tiene un guardián, ese sube de nivel (no nace otro).
+      const guardian = cargados.find((c) => cargadoHome(c) === dungeon.current.id);
+      if (guardian) {
+        if (awakened) leveledCargado.current = levelUpCargado(guardian, wp.level);   // menor: no sube, no ritual
+      } else {
+        let stolen: WeaponOpt | null = null;
+        if (awakened) {
+          // solo un némesis despierto te ROBA el arma (la saca de tu inventario)
+          const eqId = working.current.weapon.id ?? "";
+          const idx = pickStolenIndex(invRef.current, eqId);
+          if (idx >= 0) { stolen = invRef.current[idx]; invRef.current = invRef.current.slice(0, idx).concat(invRef.current.slice(idx + 1)); }
+        }
+        newCargado.current = graduateCargado(killers, runGoldRef.current, stolen, dungeon.current.id, awakened);
+      }
     }
     setOutcome("dead");
     finish("dead");   // sin pantalla de resultado: la muerte lleva directo al ritual del némesis (en el hub)
@@ -266,11 +274,19 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   /** Arranca un encuentro: si es némesis, primero su ritual de iniciativa (sin montar combate). */
   function beginEncounter(nf: { enemies: Creature[]; cargado: Cargado | null }) {
     setGroup(nf.enemies); setFightingCargado(nf.cargado);
-    if (nf.cargado) { setPendingNemesis(nf.cargado); }        // ritual primero → luego phase "fight"
+    // ritual de iniciativa SOLO para némesis despierto (jugador nv22+); el menor pelea sin ceremonia
+    if (nf.cargado && working.current.level >= NEMESIS_AWAKEN_LEVEL) { setPendingNemesis(nf.cargado); }
     else { setNemesisOpenWith(undefined); setPhase("fight"); }
   }
 
-  function goCamp() { if (springTrapIfAny()) return; setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
+  function goCamp() {
+    if (springTrapIfAny()) return;
+    // LLAVE DE PROFUNDIDAD: garantizada al despejar un piso múltiplo de 5 (fin de piso = ir a campamento).
+    const dgId = dungeon.current.id;
+    const already = (unlockedFloors?.[dgId] ?? []).includes(stage);
+    if (stage % 5 === 0 && !already) { onUnlockFloor?.(dgId, stage); setKeyAlert(stage); }
+    setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false }));
+  }
   function startRest() {
     hpAtCamp.current = working.current.hp; campStart.current = Date.now(); ambushReturn.current = "camp";
     ambushAt.current = Math.random() < AMBUSH_CHANCE ? 4 + Math.random() * (REST_FULL_SEC * 0.7) : null;

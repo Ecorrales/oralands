@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type Creature, type Characteristics, recomputeDerived, ENERGY_BASE, ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
 import { LocalStorageStore, FirebaseStore, SAVE_VERSION, firebaseConfigured, type RunState, type AuthInfo } from "../store";
-import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, type WeaponOpt } from "../game/catalog";
+import { STARTING_POTIONS, POTION_PRICE, sellValue, toWeapon, NEMESIS_AWAKEN_LEVEL, type WeaponOpt } from "../game/catalog";
 import { applyGear, gearById, gearSellValue, reqMetGear, type GearItem, type EquipSlot } from "../game/gear";
 import { normalizeInventory } from "../game/weapons";
 import { CharacterCreate } from "./CharacterCreate";
@@ -96,7 +96,7 @@ export function App() {
       if (typeof dp.maxPotions !== "number") dp.maxPotions = Math.max(BASE_POTION_SLOTS, Math.min(MAX_POTION_SLOTS, num(g.potions, STARTING_POTIONS)));
       dp.maxPotions = Math.max(BASE_POTION_SLOTS, Math.min(MAX_POTION_SLOTS, dp.maxPotions));
       setPlayer(dp);
-      setGold(num(g.gold, 0)); setPotions(Math.min(num(g.potions, STARTING_POTIONS), dp.maxPotions));   // recorta al tope
+      setGold(num(g.gold, 0)); setPotions(num(g.potions, STARTING_POTIONS));   // conserva su acumulado; el tope solo limita COMPRAR
       setInventory(normalizeInventory(g.inventory)); setCargados(g.cargados ?? []);
       materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
@@ -344,8 +344,9 @@ export function App() {
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
     await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
     if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
-    if (r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
-    else if (r.leveledCargado) setNemRitual({ cargado: r.leveledCargado, mode: "ascended" });
+    const awakened = (player?.level ?? 0) >= NEMESIS_AWAKEN_LEVEL;
+    if (awakened && r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
+    else if (awakened && r.leveledCargado) setNemRitual({ cargado: r.leveledCargado, mode: "ascended" });
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
     setScreen("hub");
   }
