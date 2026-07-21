@@ -5,9 +5,10 @@ import { t, tName } from "../game/i18n";
 const DIF_COLOR: Record<string, string> = { easy: "#7fae5a", moderate: "#c9a24a", hard: "#d67c3a", lethal: "#c0453a" };
 
 /** Selección de mazmorra + piso de entrada. Difíciles bloqueadas por nivel; pisos por llaves. */
-export function DungeonSelect({ level, unlockedFloors, onPick, onBack }: {
+export function DungeonSelect({ level, unlockedFloors, nemesisDungeons, onPick, onBack }: {
   level: number;
   unlockedFloors: Record<string, number[]>;
+  nemesisDungeons?: Set<string>;
   onPick: (dungeonId: string, floor: number) => void;
   onBack: () => void;
 }) {
@@ -38,6 +39,7 @@ export function DungeonSelect({ level, unlockedFloors, onPick, onBack }: {
               >
                 <div className="dcard-top">
                   <span className="dcard-name">{tName(d.name)}</span>
+                  {nemesisDungeons?.has(d.id) && <span className="dcard-nemesis" title={t("select.nemesisHere")} style={{ color: "#b06fe3", marginLeft: 6 }}>{"\u2620\uFE0E"}</span>}
                   {!unlocked && <span className="dcard-lock">🔒 {t("common.lvAbbr")} {d.minLevel}</span>}
                   {unlocked && floors.length > 1 && <span className="dcard-lock">🗝️ {floors.length - 1}</span>}
                 </div>

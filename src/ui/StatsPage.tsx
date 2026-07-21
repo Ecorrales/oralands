@@ -61,7 +61,10 @@ export function StatsPage({ onBack }: { onBack: () => void }) {
           <p className="statfoot">{t("stats.updated")} {new Date(stats.generatedAt).toLocaleString()}</p>
         </>
       )}
-      <button className="ghost full" style={{ marginTop: 12 }} onClick={onBack}>{t("common.back")}</button>
+      <a className="ghost full discord-btn" href="https://discord.gg/Mg4e7Z3mZ" target="_blank" rel="noopener noreferrer" style={{ marginTop: 12, display: "block", textAlign: "center", textDecoration: "none" }}>
+        {t("stats.discord")}
+      </a>
+      <button className="ghost full" style={{ marginTop: 8 }} onClick={onBack}>{t("common.back")}</button>
     </div>
   );
 }

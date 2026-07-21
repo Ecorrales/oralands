@@ -22,7 +22,7 @@ import { Shop } from "./Shop";
 import { Forge } from "./Forge";
 import { canForge, type Recipe } from "../game/forge";
 import { mergeMats, matSell, type Mats } from "../game/materials";
-import { MAX_CARGADOS, type Cargado } from "../game/cargados";
+import { MAX_CARGADOS, cargadoHome, type Cargado } from "../game/cargados";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
@@ -264,6 +264,7 @@ export function App() {
     let earned = 0;
     for (const id of Object.keys(materials)) earned += matSell(id) * materials[id];
     if (earned <= 0) return;
+    if (!window.confirm(t("sell.confirmMats", { n: earned }))) return;   // confirmación anti-venta accidental
     const ng = gold + earned;
     materialsRef.current = {}; setMaterials({}); setGold(ng);
     persist(player, ng, potions, inventory, xp, points, cargados);
@@ -297,6 +298,7 @@ export function App() {
     const seen = new Set<string>(); const kept: WeaponOpt[] = []; let earned = 0;
     for (const w of inventory) { if (seen.has(w.id)) earned += sellValue(w); else { seen.add(w.id); kept.push(w); } }
     if (earned <= 0) return;
+    if (!window.confirm(t("sell.confirmDupes", { n: earned }))) return;   // confirmación anti-venta accidental
     const ng = gold + earned;
     setInventory(kept); setGold(ng); persist(player, ng, potions, kept, xp, points, cargados);
   }
@@ -391,7 +393,7 @@ export function App() {
       {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
       {screen === "stats" && <StatsPage onBack={() => setScreen("hub")} />}
       {screen === "dungeonSelect" && player && (
-        <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
+        <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} nemesisDungeons={new Set(cargados.map(cargadoHome))} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
       )}
       {screen === "dungeon" && player && <Dungeon player={player} potions={potions} inventory={inventory} xp={xp} points={points} cargados={cargados} resume={run} dungeonId={chosenDungeon} startStage={chosenFloor} unlockedFloors={unlockedFloorsRef.current}
         onUnlockFloor={(dgId, floor) => { const cur = unlockedFloorsRef.current[dgId] ?? []; if (!cur.includes(floor)) { unlockedFloorsRef.current = { ...unlockedFloorsRef.current, [dgId]: [...cur, floor].sort((a, b) => a - b) }; } }}
