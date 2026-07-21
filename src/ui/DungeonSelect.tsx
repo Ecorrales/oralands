@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { DUNGEON_TYPES } from "../game/dungeons";
+import { DUNGEON_TYPES, difficultyOf } from "../game/dungeons";
 import { t, tName } from "../game/i18n";
+
+const DIF_COLOR: Record<string, string> = { easy: "#7fae5a", moderate: "#c9a24a", hard: "#d67c3a", lethal: "#c0453a" };
 
 /** Selección de mazmorra + piso de entrada. Difíciles bloqueadas por nivel; pisos por llaves. */
 export function DungeonSelect({ level, unlockedFloors, onPick, onBack }: {
@@ -40,6 +42,9 @@ export function DungeonSelect({ level, unlockedFloors, onPick, onBack }: {
                   {unlocked && floors.length > 1 && <span className="dcard-lock">🗝️ {floors.length - 1}</span>}
                 </div>
                 <div className="dcard-desc">{tName(d.desc)}</div>
+                <div className="dcard-dif" style={{ color: DIF_COLOR[difficultyOf(d.minLevel)], fontFamily: "var(--mono)", fontSize: 12, letterSpacing: ".04em", marginTop: 6 }}>
+                  {t("select.dif." + difficultyOf(d.minLevel))} · {t("common.lvAbbr")} {d.minLevel}+
+                </div>
               </button>
               {isOpen && (
                 <div style={{ padding: "4px 4px 10px" }}>
