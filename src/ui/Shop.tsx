@@ -43,6 +43,7 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
         <div className="invinfo">
           <b>{tName(g.name)}{on && <span className="eqtag"> {t("common.worn")}</span>}</b>
           <small>{t("common.defenseLbl")} +{g.defense ?? 0}{g.evasion ? ` · ${t("common.evasionLbl")} ${g.evasion > 0 ? "+" : ""}${g.evasion}` : ""}{g.abilities ? ` · ${t("shop.grants", { moves: moveText(g.abilities) })}` : ""}</small>
+          {g.abilities && weaponEffects(g.abilities).length > 0 && <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>{weaponEffects(g.abilities).map((e) => <EffectChip key={e.effect} abilityId={e.abilityId} user={player} />)}</div>}
           {!ok && <small className="reqline">{t("shop.requires", { req: reqText(g.req, player.characteristics) })}</small>}
           {twoHandBlock && <small className="reqline">{t("shop.haveTwoHand")}</small>}
         </div>

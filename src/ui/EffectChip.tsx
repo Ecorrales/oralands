@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { explainEffect, type EffectInfo } from "../game/effectInfo";
 import type { Creature } from "../engine";
 
@@ -16,21 +16,33 @@ export const EFFECT_COLOR: Record<string, string> = {
  */
 export function EffectTooltip({ info, color = "var(--accent)", children }: { info: EffectInfo | null; color?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [shift, setShift] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
+  const tipRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
     const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
+  // reacomoda horizontalmente si el tooltip se sale de la pantalla
+  useLayoutEffect(() => {
+    if (!open || !tipRef.current) { setShift(0); return; }
+    const r = tipRef.current.getBoundingClientRect();
+    const m = 8, vw = window.innerWidth;
+    let s = 0;
+    if (r.left < m) s = m - r.left;
+    else if (r.right > vw - m) s = (vw - m) - r.right;
+    setShift(s);
+  }, [open]);
   if (!info) return <>{children}</>;
   return (
     <span ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <span onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }} style={{ cursor: "pointer" }}>{children}</span>
       {open && (
-        <span role="tooltip" onClick={(e) => e.stopPropagation()}
-          style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
-            width: 236, maxWidth: "70vw", background: "var(--panel, #1e1a14)", border: "1px solid var(--line, #3a3227)",
+        <span ref={tipRef} role="tooltip" onClick={(e) => e.stopPropagation()}
+          style={{ position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: `translateX(calc(-50% + ${shift}px))`,
+            width: 236, maxWidth: "78vw", background: "var(--panel, #1e1a14)", border: "1px solid var(--line, #3a3227)",
             borderRadius: 10, padding: "10px 12px", boxShadow: "0 12px 30px rgba(0,0,0,.55)", zIndex: 200, textAlign: "left", cursor: "default" }}>
           <b style={{ display: "block", color, fontSize: 13, marginBottom: 4 }}>{info.title}</b>
           <span style={{ display: "block", color: "var(--ink, #e8e0d2)", fontSize: 12.5, lineHeight: 1.5 }}>{info.body}</span>
