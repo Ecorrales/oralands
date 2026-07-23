@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { t, statAbbr, tName, abilityName } from "../game/i18n";
+import { EffectChip } from "./EffectChip";
+import { weaponEffects } from "../game/effectInfo";
 import type { Creature } from "../engine";
 import { getAbility } from "../engine";
 import { RECIPES, canForge, type Recipe } from "../game/forge";
@@ -54,6 +56,7 @@ export function Forge({ player, gold, materials, onForge, onClose }: {
                     {r.kind === "weapon"
                       ? <small>{t("common.damageLbl")}{r.weapon!.damage} · {moveText(r.weapon!.abilities)}</small>
                       : <small>{t("common.defenseLbl")} +{r.gear!.defense} · {tName(r.gear!.note)}</small>}
+                    {r.kind === "weapon" && weaponEffects(r.weapon!.abilities).length > 0 && <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>{weaponEffects(r.weapon!.abilities).map((e) => <EffectChip key={e.effect} abilityId={e.abilityId} user={player} />)}</div>}
                     {!reqOk && <small className="reqline">{t("shop.requires", { req: reqText(reqObj, player.characteristics) })}</small>}
                   </div>
                   {confirmId === r.id

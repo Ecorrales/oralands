@@ -1,5 +1,7 @@
 import type { Creature } from "../engine";
 import { t, statAbbr, tName, abilityName } from "../game/i18n";
+import { EffectChip } from "./EffectChip";
+import { weaponEffects } from "../game/effectInfo";
 import { getAbility } from "../engine";
 import { STAT_ES, reqMet, groupWeapons, type WeaponOpt } from "../game/catalog";
 
@@ -22,6 +24,7 @@ export function InventoryInline({ player, inventory, onEquip }: {
             <div className="invinfo">
               <b>{tName(w.name)}{qty > 1 && <span className="qty">×{qty}</span>}{equipped && <span className="eqtag"> {t("shop.equippedTag")}</span>}</b>
               <small>{t("common.damageLbl")}{w.damage} · {w.twoHanded ? t("common.twoHandsLong") : t("common.oneHandLong")} · {moveText(w.abilities)}</small>
+              {weaponEffects(w.abilities).length > 0 && <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>{weaponEffects(w.abilities).map((e) => <EffectChip key={e.effect} abilityId={e.abilityId} user={player} />)}</div>}
               {!ok && <small className="reqline">requiere {reqTxt}</small>}
             </div>
             {equipped ? <span className="eqmark">✓</span>

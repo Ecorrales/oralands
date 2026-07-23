@@ -7,6 +7,8 @@ import {
 import { POTION_HEAL_FRACTION, POTION_COST, NEMESIS_AWAKEN_LEVEL } from "../game/catalog";
 import { EnemySprite } from "./EnemySprite";
 import { enemyKind } from "../game/enemies";
+import { EffectTooltip, EFFECT_COLOR } from "./EffectChip";
+import { explainModifier } from "../game/effectInfo";
 
 type Who = number | "player";
 interface FloatFx { id: number; who: Who; text: string; color: string; }
@@ -281,7 +283,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
               <div className="mt">Nv {e.level} · {KIND_ES[enemyKind(e)]}</div>
               <div className="bar"><div style={{ width: Math.max(0, e.hp / e.maxHp * 100) + "%", background: "var(--hp)" }} /></div>
               <div className="hpt">{Math.max(0, Math.round(e.hp))} / {e.maxHp}</div>
-              <div className="mods">{e.modifiers.map((m, j) => <span key={j} className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span>)}</div>
+              <div className="mods">{e.modifiers.map((m, j) => <EffectTooltip key={j} info={explainModifier(m)} color={EFFECT_COLOR[m.label] ?? "var(--accent)"}><span className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span></EffectTooltip>)}</div>
             </div>
           );
         })}
@@ -294,7 +296,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
         <div className="bar"><div style={{ width: Math.max(0, s.player.hp / s.player.maxHp * 100) + "%", background: s.player.hp / s.player.maxHp < 0.2 ? "var(--danger)" : "var(--php)" }} /></div>
         <div className="rw" style={{ marginTop: 6 }}><span style={{ fontSize: 11 }}>{t("common.energyLbl")}</span><span>{s.player.energy} / {s.player.maxEnergy} ⚡</span></div>
         <div className="bar" style={{ height: 6 }}><div style={{ width: Math.max(0, s.player.energy / s.player.maxEnergy * 100) + "%", background: "var(--energy)" }} /></div>
-        <div className="mods">{s.player.modifiers.map((m, i) => <span key={i} className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span>)}</div>
+        <div className="mods">{s.player.modifiers.map((m, i) => <EffectTooltip key={i} info={explainModifier(m)} color={EFFECT_COLOR[m.label] ?? "var(--accent)"}><span className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span></EffectTooltip>)}</div>
       </div>
 
       <div className="log">{s.log.map((l, i) => <p key={i} style={{ color: l.color }}>{l.text}</p>)}</div>

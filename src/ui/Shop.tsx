@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { statAbbr, slotLabel, tName, abilityName, t } from "../game/i18n";
+import { EffectChip } from "./EffectChip";
+import { weaponEffects } from "../game/effectInfo";
 import type { Creature } from "../engine";
 import { getAbility, BASE_POTION_SLOTS, MAX_POTION_SLOTS } from "../engine";
 import {
@@ -80,6 +82,7 @@ export function Shop({ player, gold, potions, inventory, equipped, gear, materia
                     <div className="invinfo">
                       <b>{tName(w.name)}<span className="soft"> · {w.twoHanded ? t("common.twoHands") : t("common.oneHand")}</span></b>
                       <small>{t("common.damageLbl")}{w.damage} · {moveText(w.abilities)}</small>
+                      {weaponEffects(w.abilities).length > 0 && <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>{weaponEffects(w.abilities).map((e) => <EffectChip key={e.effect} abilityId={e.abilityId} user={player} />)}</div>}
                       {!ok && <small className="reqline">{t("shop.requires", { req: reqText(w.req, player.characteristics) })}</small>}
                     </div>
                     <button className="small" disabled={gold < w.price} onClick={() => onBuyWeapon(w)}>◈ {w.price}</button>
