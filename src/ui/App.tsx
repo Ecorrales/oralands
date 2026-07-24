@@ -23,6 +23,7 @@ import { Forge } from "./Forge";
 import { canForge, type Recipe } from "../game/forge";
 import { mergeMats, matSell, type Mats } from "../game/materials";
 import { MAX_CARGADOS, cargadoHome, type Cargado } from "../game/cargados";
+import { emptyStats, mergeStats, type CharStats } from "../game/charStats";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
@@ -55,6 +56,7 @@ export function App() {
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
+  const statsRef = useRef<CharStats>(emptyStats());
   const unlockedFloorsRef = useRef<Record<string, number[]>>({});
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
@@ -105,6 +107,7 @@ export function App() {
       materialsRef.current = g.materials ?? {}; setMaterials(g.materials ?? {});
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
       maxDepthRef.current = Math.max(num(g.maxDepth, 0), g.run?.depth ?? 0);
+      statsRef.current = g.stats ?? emptyStats();
       unlockedFloorsRef.current = (g.unlockedFloors && typeof g.unlockedFloors === "object") ? g.unlockedFloors : {};
       const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
       setScreen(savedRun ? "dungeon" : "hub");
@@ -158,7 +161,7 @@ export function App() {
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
       materials: materialsRef.current, run: runRef.current, xp: x, points: pts,
-      maxDepth: maxDepthRef.current, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
+      maxDepth: maxDepthRef.current, stats: statsRef.current, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
     });
   };
 
@@ -172,6 +175,7 @@ export function App() {
     materialsRef.current = {}; setMaterials({});
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
+    statsRef.current = emptyStats();   // stats por personaje: arrancan en cero
     setScreen("hub");
     setShowTutorial(true);   // ritual de bienvenida (pergamino del guardián)
     try { await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); }
@@ -265,6 +269,8 @@ export function App() {
     for (const id of Object.keys(materials)) earned += matSell(id) * materials[id];
     if (earned <= 0) return;
     if (!window.confirm(t("sell.confirmMats", { n: earned }))) return;   // confirmación anti-venta accidental
+    const soldCount = Object.values(materials).reduce((a, b) => a + b, 0);
+    statsRef.current = mergeStats(statsRef.current, { itemsSold: soldCount, goldEarned: earned });
     const ng = gold + earned;
     materialsRef.current = {}; setMaterials({}); setGold(ng);
     persist(player, ng, potions, inventory, xp, points, cargados);
@@ -276,6 +282,7 @@ export function App() {
     if (!g) return;
     if (equipped[g.slot] === id) return;   // no se puede vender lo que traes puesto
     const gr = gear.filter((x) => x.id !== id);
+    statsRef.current = mergeStats(statsRef.current, { itemsSold: 1, goldEarned: gearSellValue(g) });
     const ng = gold + gearSellValue(g);
     gearRef.current = gr; setGear(gr); setGold(ng);
     persist(player, ng, potions, inventory, xp, points, cargados);
@@ -288,6 +295,7 @@ export function App() {
     if (n <= 0) return;
     const mats = { ...materials, [id]: have - n };
     if (mats[id] <= 0) delete mats[id];
+    statsRef.current = mergeStats(statsRef.current, { itemsSold: n, goldEarned: matSell(id) * n });
     const ng = gold + matSell(id) * n;
     materialsRef.current = mats; setMaterials(mats); setGold(ng);
     persist(player, ng, potions, inventory, xp, points, cargados);
@@ -299,6 +307,7 @@ export function App() {
     for (const w of inventory) { if (seen.has(w.id)) earned += sellValue(w); else { seen.add(w.id); kept.push(w); } }
     if (earned <= 0) return;
     if (!window.confirm(t("sell.confirmDupes", { n: earned }))) return;   // confirmación anti-venta accidental
+    statsRef.current = mergeStats(statsRef.current, { itemsSold: inventory.length - kept.length, goldEarned: earned });
     const ng = gold + earned;
     setInventory(kept); setGold(ng); persist(player, ng, potions, kept, xp, points, cargados);
   }
@@ -348,6 +357,11 @@ export function App() {
     let carg = cargados.filter((c) => !r.defeatedCargados.includes(c.id));
     if (r.leveledCargado) carg = carg.map((c) => (c.id === r.leveledCargado!.id ? r.leveledCargado! : c));   // némesis que subió de nivel
     if (r.newCargado) { if (carg.length >= MAX_CARGADOS) carg = carg.slice(1); carg = [...carg, r.newCargado]; }
+    const runDelta: Partial<CharStats> = { ...(r.runStats ?? {}) };
+    if (r.outcome === "dead") runDelta.deaths = (runDelta.deaths ?? 0) + 1;
+    if (r.defeatedCargados.length) runDelta.nemesisSlain = (runDelta.nemesisSlain ?? 0) + r.defeatedCargados.length;
+    if (banked > 0) runDelta.goldEarned = (runDelta.goldEarned ?? 0) + banked;
+    statsRef.current = mergeStats(statsRef.current, runDelta);
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
     await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
     if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);

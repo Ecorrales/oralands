@@ -15,6 +15,7 @@ import { reqMet, STAT_ES, toWeapon, type WeaponOpt, NEMESIS_AWAKEN_LEVEL } from 
 import { graduateCargado, levelUpCargado, pickStolenIndex, cargadoHome, type Cargado } from "../game/cargados";
 import { SEARCH_SEC, SEARCH_AMBUSH_CHANCE, searchChance, searchGold, searchOutcome, searchIntro } from "../game/search";
 import type { RunState } from "../store/PlayerStore";
+import { baseSpecies, type CharStats } from "../game/charStats";
 import { Combat } from "./Combat";
 import { StatsInline } from "./StatsInline";
 import { InventoryInline } from "./InventoryInline";
@@ -29,6 +30,7 @@ export interface RunResult {
   newCargado: Cargado | null; defeatedCargados: string[]; recoveredWeapons: WeaponOpt[];
   leveledCargado: Cargado | null;   // némesis que te ganó de nuevo y subió de nivel
   materials: Mats;
+  runStats?: Partial<CharStats>;   // deltas de estadísticas de esta bajada
 }
 
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
@@ -105,6 +107,10 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 
   useEffect(() => { setStalkerPending(stalker.current != null); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const runStats = useRef<Partial<CharStats>>(resume?.runStats ?? {});
+  const sBump = (k: keyof CharStats, n = 1) => { (runStats.current as any)[k] = (((runStats.current as any)[k] as number) ?? 0) + n; };
+  const sMap = (k: keyof CharStats, sub: string, n = 1) => { const m = ((runStats.current as any)[k] ??= {}) as Record<string, number>; m[sub] = (m[sub] ?? 0) + n; };
+  const sMax = (k: keyof CharStats, v: number) => { (runStats.current as any)[k] = Math.max(((runStats.current as any)[k] as number) ?? 0, v); };
   function buildRun(over: Partial<RunState>): RunState {
     return {
       stage, stageRooms, roomInStage, depth: depth.current,
@@ -114,6 +120,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       resting: false, campStartMs: campStart.current, hpAtCamp: hpAtCamp.current, ambushAtSec: ambushAt.current,
       stalkerId: stalker.current?.id ?? null, defeated: defeated.current, recovered: recovered.current,
       runMaterials: runMats.current, dungeonId: dungeon.current.id,
+      runStats: runStats.current,
       ...over,
     };
   }
@@ -126,7 +133,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     const id = setInterval(() => {
       const elapsed = (Date.now() - campStart.current) / 1000;
       if (ambushAt.current != null && elapsed >= ambushAt.current) {
-        ambushAt.current = null; setResting(false);
+        ambushAt.current = null; setResting(false); sBump("ambushed");
         setAmbushGroup(makeDungeonGroup(depth.current, stage, dungeon.current.kinds)); setPhase("ambush");
         return;
       }
@@ -146,7 +153,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       if (searchAmbushAt.current != null && elapsed >= searchAmbushAt.current) {
         searchAmbushAt.current = null; setSearching(false); setSearched(true);
         setSearchText(t("dungeon.ambushedSearch"));
-        ambushReturn.current = "cleared";
+        ambushReturn.current = "cleared"; sBump("ambushed");
         setAmbushGroup(makeDungeonGroup(depth.current, stage, dungeon.current.kinds)); setPhase("ambush");
         return;
       }
@@ -160,7 +167,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
           runMats.current = mergeMats(runMats.current, mats);
           extra = ` (+◈${searchGoldAmt.current} · ${matsSummary(mats)})`;
         }
-        if (roomTrap.current) { setTrapAlert(tName(roomTrap.current.detect)); roomTrap.current = null; }
+        if (roomTrap.current) { setTrapAlert(tName(roomTrap.current.detect)); sBump("trapsFound"); roomTrap.current = null; }
         setSearchText(searchOutcome(dungeon.current.biome, searchFound.current) + extra);
         onCheckpoint(buildRun({ phase: "cleared", searched: true }));
       }
@@ -183,6 +190,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     for (const e of enemies) {
       xpGain += xpForEnemy(depth.current);
       if (Math.random() < goldDropChance(enemyKind(e))) g += goldForEnemy(depth.current);
+      sMap("killsBySpecies", baseSpecies(e.name)); sMap("killsByType", enemyKind(e)); sBump("killsTotal");
     }
     runGoldRef.current += g; setRoomGold(g); setRunGold(runGoldRef.current);
     noGoldLine.current = g > 0 ? "" : rollNoGoldLine();
@@ -230,6 +238,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     if (!res.survived) { onDeath(group, wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
     else awardKill(group);
+    sBump("roomsCleared"); sMap("weaponUses", working.current.weapon.id ?? "?");
     const kind = enemyKind(group[0] ?? working.current);
     const mats = rollRoomMaterials(kind, depth.current);
     runMats.current = mergeMats(runMats.current, mats);
@@ -258,6 +267,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     const trap = roomTrap.current;
     roomTrap.current = null;
     if (!trap) return false;
+    sBump("trapsSprung");
     const dmg = trapDamage(trap, wp.maxHp);
     working.current = { ...working.current, hp: Math.max(0, working.current.hp - dmg) };
     setTrapMsg(`⚠ ${tName(trap.name)} — ${tName(trap.trigger)} (−${dmg} ${t("dungeon.hpLoss")})`);
@@ -285,16 +295,18 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     const dgId = dungeon.current.id;
     const already = (unlockedFloors?.[dgId] ?? []).includes(stage);
     if (stage % 5 === 0 && !already) { onUnlockFloor?.(dgId, stage); setKeyAlert(stage); }
+    sBump("floorsCleared"); sMax("deepestFloor", stage);
     setPhase("camp"); onCheckpoint(buildRun({ phase: "camp", resting: false }));
   }
   function startRest() {
+    sBump("timesCamped");
     hpAtCamp.current = working.current.hp; campStart.current = Date.now(); ambushReturn.current = "camp";
     ambushAt.current = Math.random() < AMBUSH_CHANCE ? 4 + Math.random() * (REST_FULL_SEC * 0.7) : null;
     setResting(true);
     onCheckpoint(buildRun({ phase: "camp", resting: true }));
   }
   function startSearch() {
-    setTrapAlert(null); setKeyAlert(null);
+    setTrapAlert(null); setKeyAlert(null); sBump("roomsSearched");
     searchStart.current = Date.now(); searchProgress.current = 0;
     searchFound.current = Math.random() < searchChance(wp.characteristics.dexterity, wp.characteristics.intelligence);
     searchGoldAmt.current = searchFound.current ? searchGold(depth.current) : 0;
@@ -303,7 +315,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   }
   function breakCamp() { setResting(false); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function continueDeeper() {
-    const ns = stage + 1;
+    const ns = stage + 1; sMax("deepestFloor", ns);
     depth.current += 1; setStage(ns); setStageRooms(rollRoomCount()); setRoomInStage(0);
     working.current = { ...working.current, energy: working.current.maxEnergy }; setResting(false);
     beginEncounter(nextFight(depth.current, ns));
@@ -344,6 +356,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       newCargado: newCargado.current, defeatedCargados: defeated.current, recoveredWeapons: recovered.current,
       leveledCargado: leveledCargado.current,
       materials: runMats.current,
+      runStats: runStats.current,
     });
   }
 
