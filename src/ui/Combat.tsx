@@ -9,6 +9,7 @@ import { EnemySprite } from "./EnemySprite";
 import { enemyKind } from "../game/enemies";
 import { EffectTooltip, EFFECT_COLOR } from "./EffectChip";
 import { explainModifier } from "../game/effectInfo";
+import type { CharStats } from "../game/charStats";
 
 type Who = number | "player";
 interface FloatFx { id: number; who: Who; text: string; color: string; }
@@ -79,7 +80,7 @@ const bestAffordable = (c: Creature, pool: number, smart?: { target: Creature })
 export function Combat({ player, enemies, potions, openWith, onEnd }: {
   player: Creature; enemies: Creature[]; potions: number;
   openWith?: "player" | "enemy";
-  onEnd: (r: { survived: boolean; player: Creature; potions: number }) => void;
+  onEnd: (r: { survived: boolean; player: Creature; potions: number; statsDelta?: Partial<CharStats> }) => void;
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
   const floatId = useRef(0);
@@ -132,12 +133,17 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
   const aliveTarget = (i: number) => (!isDead(b.current.enemies[i]) ? i : firstAlive());
 
   function selectTarget(i: number) { const s = b.current; if (s.phase === "player" && !isDead(s.enemies[i])) { s.target = i; force(); } }
+  const cStats = useRef<Partial<CharStats>>({});
+  const cMap = (k: keyof CharStats, sub: string, n = 1) => { const m = ((cStats.current as any)[k] ??= {}) as Record<string, number>; m[sub] = (m[sub] ?? 0) + n; };
+  const cInc = (k: keyof CharStats, n = 1) => { (cStats.current as any)[k] = (((cStats.current as any)[k] as number) ?? 0) + n; };
+
   function useAbilityPlayer(ab: AbilitySpec) {
     const s = b.current;
     if (s.phase !== "player" || s.player.energy < ab.energyCost) return;
     const ti = aliveTarget(s.target);
     if (ti < 0) return;
     s.player.energy -= ab.energyCost;
+    cMap("skillUses", ab.id); if (s.player.energy <= 0) cInc("energyEmptied");
     const tgt = s.enemies[ti];
     const r = resolveAbility(ab, s.player, tgt, DEFAULT_TUNE);
     if (!r.hit) { pushLog(t("combat.log.miss", { name: s.player.name, ability: abilityName(ab.id), chance: r.chance }), "var(--muted)"); force(); return; }
@@ -152,7 +158,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
   function usePotion() {
     const s = b.current;
     if (s.phase !== "player" || s.potions <= 0 || s.player.hp >= s.player.maxHp || s.player.energy < POTION_COST) return;
-    s.potions -= 1; s.player.energy -= POTION_COST;
+    s.potions -= 1; s.player.energy -= POTION_COST; cInc("potionsDrunk");
     const heal = Math.round(s.player.maxHp * POTION_HEAL_FRACTION);
     s.player.hp = Math.min(s.player.maxHp, s.player.hp + heal);
     spawnFloat("player", "+" + heal, "#7fae5a"); pushLog(t("combat.log.potion", { name: s.player.name, heal }), "var(--success)");
@@ -334,7 +340,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
             <button disabled={!canAct} onClick={endTurn}>{t("combat.endTurn")}</button>
           </>
         ) : (
-          <button className="primary" onClick={() => onEnd({ survived: !isDead(s.player), player: s.player, potions: s.potions })}>{t("common.continue")}</button>
+          <button className="primary" onClick={() => onEnd({ survived: !isDead(s.player), player: s.player, potions: s.potions, statsDelta: cStats.current })}>{t("common.continue")}</button>
         )}
       </div>
     </div>

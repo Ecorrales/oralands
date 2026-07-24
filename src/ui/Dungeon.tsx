@@ -111,6 +111,7 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   const sBump = (k: keyof CharStats, n = 1) => { (runStats.current as any)[k] = (((runStats.current as any)[k] as number) ?? 0) + n; };
   const sMap = (k: keyof CharStats, sub: string, n = 1) => { const m = ((runStats.current as any)[k] ??= {}) as Record<string, number>; m[sub] = (m[sub] ?? 0) + n; };
   const sMax = (k: keyof CharStats, v: number) => { (runStats.current as any)[k] = Math.max(((runStats.current as any)[k] as number) ?? 0, v); };
+  const mergeDelta = (delta?: Partial<CharStats>) => { if (!delta) return; for (const [k, v] of Object.entries(delta)) { if (v && typeof v === "object") { for (const [sk, sv] of Object.entries(v as Record<string, number>)) sMap(k as keyof CharStats, sk, sv); } else if (typeof v === "number") sBump(k as keyof CharStats, v); } };
   function buildRun(over: Partial<RunState>): RunState {
     return {
       stage, stageRooms, roomInStage, depth: depth.current,
@@ -232,8 +233,8 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     if (c.weapon) recovered.current.push(c.weapon);
     runGoldRef.current += c.gold; setRunGold(runGoldRef.current);
   }
-  function handleCombatEnd(res: { survived: boolean; player: Creature; potions: number }) {
-    working.current = res.player; potionsRef.current = res.potions;
+  function handleCombatEnd(res: { survived: boolean; player: Creature; potions: number; statsDelta?: Partial<CharStats> }) {
+    working.current = res.player; potionsRef.current = res.potions; mergeDelta(res.statsDelta);
     const wasCargado = fightingCargado;
     if (!res.survived) { onDeath(group, wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
@@ -250,8 +251,8 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     setPhase("cleared");
     onCheckpoint(buildRun({ phase: "cleared", drop: d, picked: false, equipped: false, searched: false }));
   }
-  function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number }) {
-    working.current = res.player; potionsRef.current = res.potions;
+  function handleAmbushEnd(res: { survived: boolean; player: Creature; potions: number; statsDelta?: Partial<CharStats> }) {
+    working.current = res.player; potionsRef.current = res.potions; mergeDelta(res.statsDelta);
     if (!res.survived) { onDeath(ambushGroup ?? [], null); return; }
     awardKill(ambushGroup ?? []); setAmbushGroup(null); setResting(false); ambushAt.current = null;
     const back = ambushReturn.current;
