@@ -3,6 +3,7 @@ import type { WeaponOpt } from "../game/catalog";
 import type { GearItem, EquipSlot } from "../game/gear";
 import type { Mats } from "../game/materials";
 import type { Cargado } from "../game/cargados";
+import type { CharStats } from "../game/charStats";
 
 /** Foto de una bajada en curso, guardada en checkpoints seguros (campamento / sala despejada). */
 export interface RunState {
@@ -15,6 +16,7 @@ export interface RunState {
   stalkerId: string | null; defeated: string[]; recovered: WeaponOpt[];
   runMaterials: Mats;
   dungeonId: string;
+  runStats?: Partial<CharStats>;
 }
 
 export interface SavedGame {
@@ -31,6 +33,7 @@ export interface SavedGame {
   xp: number;
   points: number;
   maxDepth?: number;    // profundidad máxima histórica alcanzada (para estadísticas)
+  stats?: CharStats;    // estadísticas de comportamiento por personaje (kills, estilo, exploración…)
   unlockedFloors?: Record<string, number[]>;   // pisos desbloqueados por mazmorra (llaves): { cripta: [5,10], ... }
   savedAt: string;
 }
