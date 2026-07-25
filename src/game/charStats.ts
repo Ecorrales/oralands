@@ -77,3 +77,26 @@ export function topKey(map: Record<string, number>): string | null {
   for (const [k, v] of Object.entries(map ?? {})) if (v > max) { max = v; best = k; }
   return best;
 }
+
+/** Resta stats (actual − snapshot) para aislar el tramo reciente. No baja de 0. Records = valor actual. */
+export function subtractStats(cur: CharStats, base: CharStats): CharStats {
+  const out = emptyStats();
+  for (const k of Object.keys(out) as (keyof CharStats)[]) {
+    if ((["killsBySpecies", "killsByType", "skillUses", "weaponUses"] as string[]).includes(k)) {
+      const c = cur[k] as Record<string, number>, b = base[k] as Record<string, number>, m = out[k] as Record<string, number>;
+      for (const [sk, sv] of Object.entries(c)) { const d = sv - (b[sk] ?? 0); if (d > 0) m[sk] = d; }
+    } else if (k === "deepestFloor") {
+      (out[k] as number) = cur[k] as number;   // récord: se queda el actual
+    } else {
+      (out[k] as number) = Math.max(0, (cur[k] as number) - (base[k] as number));
+    }
+  }
+  return out;
+}
+
+/** El hito de título más alto cruzado esta run (22, 42, 62…), o null si no cruzó ninguno. */
+export function milestoneCrossed(oldLevel: number, newLevel: number, first = 22, step = 20): number | null {
+  let hit: number | null = null;
+  for (let m = first; m <= newLevel; m += step) if (oldLevel < m && newLevel >= m) hit = m;
+  return hit;
+}
