@@ -59,6 +59,9 @@ export function App() {
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
   const statsRef = useRef<CharStats>(emptyStats());
+  const titlesRef = useRef<AwardedTitle[]>([]);
+  const statsSnapshotRef = useRef<CharStats | null>(null);
+  const accountRef = useRef<AccountData>({});
   const unlockedFloorsRef = useRef<Record<string, number[]>>({});
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
@@ -110,12 +113,14 @@ export function App() {
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
       maxDepthRef.current = Math.max(num(g.maxDepth, 0), g.run?.depth ?? 0);
       statsRef.current = g.stats ?? emptyStats();
+      titlesRef.current = g.titles ?? [];
+      statsSnapshotRef.current = g.statsSnapshot ?? null;
       unlockedFloorsRef.current = (g.unlockedFloors && typeof g.unlockedFloors === "object") ? g.unlockedFloors : {};
       const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
       setScreen(savedRun ? "dungeon" : "hub");
     } else setScreen("create");
   }
-  const loadFromStore = () => { store.load().then(hydrate); };
+  const loadFromStore = () => { store.load().then(hydrate); store.loadAccount?.().then((a) => { accountRef.current = a ?? {}; }); };
 
   // Sesión de Firebase (login con Google). Solo activo cuando Firebase está conectado.
   const [auth, setAuth] = useState<AuthInfo | null>(null);
@@ -163,7 +168,7 @@ export function App() {
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
       materials: materialsRef.current, run: runRef.current, xp: x, points: pts,
-      maxDepth: maxDepthRef.current, stats: statsRef.current, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
+      maxDepth: maxDepthRef.current, stats: statsRef.current, titles: titlesRef.current, statsSnapshot: statsSnapshotRef.current ?? undefined, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
     });
   };
 
@@ -178,6 +183,7 @@ export function App() {
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
     statsRef.current = emptyStats();   // stats por personaje: arrancan en cero
+    titlesRef.current = []; statsSnapshotRef.current = null;   // títulos por personaje (la cuenta/fundador se conserva)
     setScreen("hub");
     setShowTutorial(true);   // ritual de bienvenida (pergamino del guardián)
     try { await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); }
