@@ -23,9 +23,7 @@ import { Forge } from "./Forge";
 import { canForge, type Recipe } from "../game/forge";
 import { mergeMats, matSell, type Mats } from "../game/materials";
 import { MAX_CARGADOS, cargadoHome, type Cargado } from "../game/cargados";
-import { emptyStats, mergeStats, type CharStats } from "../game/charStats";
-import { type AwardedTitle } from "../game/titles";
-import { type AccountData } from "../store/PlayerStore";
+import { emptyStats, mergeStats, subtractStats, milestoneCrossed, type CharStats } from "../game/charStats";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
@@ -55,13 +53,12 @@ export function App() {
   const [nemRitual, setNemRitual] = useState<{ cargado: Cargado; mode: "born" | "ascended" } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showUmbral, setShowUmbral] = useState(false);
+  const [titleRitual, setTitleRitual] = useState<AwardedTitle | null>(null);
+  const pendingUmbralRef = useRef(false);
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
   const maxDepthRef = useRef<number>(0);
   const statsRef = useRef<CharStats>(emptyStats());
-  const titlesRef = useRef<AwardedTitle[]>([]);
-  const statsSnapshotRef = useRef<CharStats | null>(null);
-  const accountRef = useRef<AccountData>({});
   const unlockedFloorsRef = useRef<Record<string, number[]>>({});
   const gearRef = useRef<GearItem[]>([]);
   const equippedRef = useRef<Equipped>({});
@@ -113,14 +110,12 @@ export function App() {
       setXp(num(g.xp, 0)); setPoints(num(g.points, 0));
       maxDepthRef.current = Math.max(num(g.maxDepth, 0), g.run?.depth ?? 0);
       statsRef.current = g.stats ?? emptyStats();
-      titlesRef.current = g.titles ?? [];
-      statsSnapshotRef.current = g.statsSnapshot ?? null;
       unlockedFloorsRef.current = (g.unlockedFloors && typeof g.unlockedFloors === "object") ? g.unlockedFloors : {};
       const savedRun = g.run ?? null; runRef.current = savedRun; setRun(savedRun);
       setScreen(savedRun ? "dungeon" : "hub");
     } else setScreen("create");
   }
-  const loadFromStore = () => { store.load().then(hydrate); store.loadAccount?.().then((a) => { accountRef.current = a ?? {}; }); };
+  const loadFromStore = () => { store.load().then(hydrate); };
 
   // Sesión de Firebase (login con Google). Solo activo cuando Firebase está conectado.
   const [auth, setAuth] = useState<AuthInfo | null>(null);
@@ -168,7 +163,7 @@ export function App() {
       version: SAVE_VERSION, player: p, gold: g, potions: pot, inventory: inv,
       gear: gearRef.current, equipped: equippedRef.current, cargados: carg,
       materials: materialsRef.current, run: runRef.current, xp: x, points: pts,
-      maxDepth: maxDepthRef.current, stats: statsRef.current, titles: titlesRef.current, statsSnapshot: statsSnapshotRef.current ?? undefined, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
+      maxDepth: maxDepthRef.current, stats: statsRef.current, unlockedFloors: unlockedFloorsRef.current, savedAt: new Date().toISOString(),
     });
   };
 
@@ -183,7 +178,6 @@ export function App() {
     const dp = derive(p, [], {});
     setPlayer(dp); setGold(0); setPotions(STARTING_POTIONS); setInventory(inv); setXp(0); setPoints(0); setCargados([]);
     statsRef.current = emptyStats();   // stats por personaje: arrancan en cero
-    titlesRef.current = []; statsSnapshotRef.current = null;   // títulos por personaje: arrancan vacíos (la cuenta/fundador se conserva)
     setScreen("hub");
     setShowTutorial(true);   // ritual de bienvenida (pergamino del guardián)
     try { await persist(dp, 0, STARTING_POTIONS, inv, 0, 0, []); }
@@ -371,12 +365,39 @@ export function App() {
     if (banked > 0) runDelta.goldEarned = (runDelta.goldEarned ?? 0) + banked;
     statsRef.current = mergeStats(statsRef.current, runDelta);
     setPlayer(next); setGold(newGold); setPotions(r.potions); setInventory(inv); setXp(r.xp); setPoints(r.points); setCargados(carg);
-    await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
-    if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
     const oldLevel = player?.level ?? 0;
     const crossedUmbral = oldLevel < NEMESIS_AWAKEN_LEVEL && next.level >= NEMESIS_AWAKEN_LEVEL;
     const awakened = next.level >= NEMESIS_AWAKEN_LEVEL;
-    if (crossedUmbral) setShowUmbral(true);   // el gran momento: el mundo despierta a tu nombre
+
+    // ── TÍTULOS: fundador (veterano pre-sistema) o hito cruzado (22, 42, 62…) ──
+    let awarded: AwardedTitle | null = null;
+    const isFounder = !accountRef.current.founder && oldLevel >= NEMESIS_AWAKEN_LEVEL && titlesRef.current.length === 0;
+    if (isFounder) {
+      awarded = founderTitle(next.level, next.name);
+      titlesRef.current = [awarded];
+      statsSnapshotRef.current = statsRef.current;   // punto cero: su leyenda cuenta desde ahora
+      accountRef.current = { ...accountRef.current, founder: true, founderShown: true };
+      store.saveAccount?.(accountRef.current);
+    } else {
+      const ms = milestoneCrossed(oldLevel, next.level);
+      if (ms) {
+        const tramo = statsSnapshotRef.current ? subtractStats(statsRef.current, statsSnapshotRef.current) : statsRef.current;
+        const levels = statsSnapshotRef.current ? 20 : next.level;   // 1er título = todo su ascenso
+        awarded = computeTitle(tramo, next.level, next.name, levels);
+        titlesRef.current = [...titlesRef.current, awarded];
+        statsSnapshotRef.current = statsRef.current;   // nueva foto para el próximo tramo
+      }
+    }
+
+    await persist(next, newGold, r.potions, inv, r.xp, r.points, carg);
+    if (r.points > 0) setLevelMsg(`Tienes ${r.points} punto(s) sin repartir — ábrelos en Stats.`);
+
+    // ── cola de rituales: TÍTULO primero, UMBRAL después (solo cuando coinciden, en nv22) ──
+    if (awarded) {
+      pendingUmbralRef.current = crossedUmbral;   // si además cruzó el umbral, va TRAS el título
+      setTitleRitual(awarded);
+    }
+    else if (crossedUmbral) setShowUmbral(true);
     else if (awakened && r.newCargado) setNemRitual({ cargado: r.newCargado, mode: "born" });
     else if (awakened && r.leveledCargado) setNemRitual({ cargado: r.leveledCargado, mode: "ascended" });
     else if (r.recoveredWeapons.length || r.defeatedCargados.length) setCargadoMsg(`Recuperaste tu botín de un némesis.`);
@@ -395,6 +416,7 @@ export function App() {
       {nemRitual && <NemesisRitual cargado={nemRitual.cargado} mode={nemRitual.mode} onDone={() => setNemRitual(null)} />}
       {showTutorial && <ScrollTutorial onDone={() => setShowTutorial(false)} />}
       {showUmbral && <UmbralRitual onDone={() => setShowUmbral(false)} />}
+      {titleRitual && <TitleRitual title={titleRitual} onDone={() => { setTitleRitual(null); if (pendingUmbralRef.current) { pendingUmbralRef.current = false; setShowUmbral(true); } }} />}
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
       {screen === "loading" && (
