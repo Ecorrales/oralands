@@ -24,6 +24,9 @@ import { canForge, type Recipe } from "../game/forge";
 import { mergeMats, matSell, type Mats } from "../game/materials";
 import { MAX_CARGADOS, cargadoHome, type Cargado } from "../game/cargados";
 import { emptyStats, mergeStats, subtractStats, milestoneCrossed, type CharStats } from "../game/charStats";
+import { computeTitle, founderTitle, type AwardedTitle } from "../game/titles";
+import { TitleRitual } from "./TitleRitual";
+import { type AccountData } from "../store/PlayerStore";
 import type { RunResult } from "./Dungeon";
 
 const store = firebaseConfigured ? new FirebaseStore() : new LocalStorageStore();
