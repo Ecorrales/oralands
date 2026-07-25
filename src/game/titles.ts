@@ -145,3 +145,9 @@ export function computeTitle(s: Partial<CharStats>, level: number, player: strin
   if (topSkill && NAME[topSkill]) return make(topSkill, "combate", level, player);
   return make("methodical", "temeridad", level, player);   // último recurso
 }
+
+/** Cuál título lucir en el hub: el fundador tiene prioridad (irrepetible); si no, el más reciente. */
+export function titleToShow(titles?: AwardedTitle[]): AwardedTitle | null {
+  if (!titles || !titles.length) return null;
+  return titles.find((t) => t.founder) ?? titles[titles.length - 1];
+}
