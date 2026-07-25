@@ -443,7 +443,7 @@ export function App() {
         <AccountBar auth={auth} busy={authBusy} msg={authMsg} onLink={linkGoogle} onSignOut={signOutGoogle} />
       )}
       {screen === "create" && <CharacterCreate onCreate={handleCreate} />}
-      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
+      {screen === "hub" && player && <Hub player={player} gold={gold} potions={potions} inventory={inventory} equippedGear={itemsOf(gear, equipped)} titles={titlesRef.current} onFight={() => { setLevelMsg(null); setCargadoMsg(null); runRef.current = null; setRun(null); setChosenDungeon(null); setScreen("dungeonSelect"); }} onNew={handleNew} onEquip={handleEquip} cargados={cargados} onOpenShop={() => setShowShop(true)} onOpenForge={() => setShowForge(true)} onOpenEquip={() => setShowEquip(true)} onOpenStats={() => setScreen("stats")} materials={materials} />}
       {screen === "stats" && <StatsPage onBack={() => setScreen("hub")} />}
       {screen === "dungeonSelect" && player && (
         <DungeonSelect level={player.level} unlockedFloors={unlockedFloorsRef.current} nemesisNames={Object.fromEntries(cargados.map((c) => [cargadoHome(c), c.creature.name]))} onBack={() => setScreen("hub")} onPick={(id, floor) => { setChosenDungeon(id); setChosenFloor(floor); setScreen("dungeon"); }} />
