@@ -25,6 +25,8 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "hub.town": { es: "El Pueblo", en: "Town" },
+  "create.needName": { es: "Identifícate, forastero. El calabozo no recibe a los sin nombre.", en: "Identify yourself, stranger. The dungeon does not receive the nameless." },
   "select.nemesisWaits": { es: "{name} te acecha aquí", en: "{name} lurks here" },
   "sell.confirmMats": { es: "¿Vender TODOS tus materiales por ◈{n}? Esto no se puede deshacer.", en: "Sell ALL your materials for ◈{n}? This can't be undone." },
   "sell.confirmDupes": { es: "¿Vender todas las armas repetidas por ◈{n}?", en: "Sell all duplicate weapons for ◈{n}?" },
@@ -252,7 +254,7 @@ const DICT: Record<string, Entry> = {
   "dungeon.toCamp":        { es: "Llegar al campamento", en: "Camp" },
   "dungeon.restHere":      { es: "Acampar y descansar", en: "Rest and recover" },
   "dungeon.deeper":        { es: "Bajar más profundo (piso {n})", en: "Go deeper (floor {n})" },
-  "dungeon.leave":         { es: "Salir del dungeon (◈ {gold})", en: "Leave the dungeon (◈ {gold})" },
+  "dungeon.leave":         { es: "Salir y asegurar ◈ {gold} de botín", en: "Leave & secure ◈ {gold} of loot" },
   "dungeon.fellStage":     { es: "Caíste en el piso {stage}, sala {room}.", en: "You fell on floor {stage}, room {room}." },
   "common.continue":       { es: "Continuar", en: "Continue" },
   "combat.endTurn":        { es: "Terminar turno", en: "End turn" },
