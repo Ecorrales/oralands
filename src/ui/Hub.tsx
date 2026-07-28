@@ -91,22 +91,28 @@ export function Hub({ player, gold, potions, inventory, equippedGear, cargados, 
         </>
       )}
 
-      <div className="actions" style={{ marginTop: 14 }}>
-        <button className="primary" onClick={onFight}>{t("hub.enter")}</button>
-        <button onClick={onOpenEquip}>{t("hub.equip")}</button>
-        <button onClick={onOpenShop}>{t("hub.shop")}</button>
-        <button onClick={onOpenForge}>{t("hub.forge")}</button>
-        <button onClick={onOpenStats}>{t("hub.stats")}</button>
-        {confirmNew
-          ? (
-            <div className="confirmrow">
-              <span className="confirmq">{t("hub.confirmNew", { name: player.name })}</span>
-              <button className="small danger" onClick={onNew}>{t("hub.yesDelete")}</button>
-              <button className="small ghost" onClick={() => setConfirmNew(false)}>{t("hub.no")}</button>
-            </div>
-          )
-          : <button onClick={() => setConfirmNew(true)}>{t("hub.newChar")}</button>}
-      </div>
+      <button className="primary" onClick={onFight} style={{ marginTop: 16, width: "100%", padding: "18px", fontSize: 18, fontWeight: 700, letterSpacing: ".01em" }}>⚔️ {t("hub.enter")}</button>
+
+      <fieldset style={{ marginTop: 16, border: "1px solid var(--line)", borderRadius: 12, padding: "10px 14px 14px" }}>
+        <legend style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".22em", textTransform: "uppercase", color: "var(--accent)", padding: "0 8px" }}>{t("hub.town")}</legend>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+          <button onClick={onOpenShop}>{t("hub.shop")}</button>
+          <button onClick={onOpenForge}>{t("hub.forge")}</button>
+          <button onClick={onOpenEquip}>{t("hub.equip")}</button>
+          <button onClick={onOpenStats}>{t("hub.stats")}</button>
+        </div>
+        <div style={{ marginTop: 9 }}>
+          {confirmNew
+            ? (
+              <div className="confirmrow">
+                <span className="confirmq">{t("hub.confirmNew", { name: player.name })}</span>
+                <button className="small danger" onClick={onNew}>{t("hub.yesDelete")}</button>
+                <button className="small ghost" onClick={() => setConfirmNew(false)}>{t("hub.no")}</button>
+              </div>
+            )
+            : <button className="ghost full" onClick={() => setConfirmNew(true)}>{t("hub.newChar")}</button>}
+        </div>
+      </fieldset>
 
       {showTitles && (
         <div onClick={() => setShowTitles(false)} style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(6,4,3,.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}>

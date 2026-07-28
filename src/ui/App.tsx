@@ -57,6 +57,8 @@ export function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showUmbral, setShowUmbral] = useState(false);
   const [titleRitual, setTitleRitual] = useState<AwardedTitle | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ text: string; onYes: () => void } | null>(null);
+  const askConfirm = (text: string, onYes: () => void) => setConfirmDialog({ text, onYes });
   const pendingUmbralRef = useRef(false);
   const [run, setRun] = useState<RunState | null>(null);
   const runRef = useRef<RunState | null>(null);
@@ -279,12 +281,13 @@ export function App() {
     let earned = 0;
     for (const id of Object.keys(materials)) earned += matSell(id) * materials[id];
     if (earned <= 0) return;
-    if (!window.confirm(t("sell.confirmMats", { n: earned }))) return;   // confirmación anti-venta accidental
-    const soldCount = Object.values(materials).reduce((a, b) => a + b, 0);
-    statsRef.current = mergeStats(statsRef.current, { itemsSold: soldCount, goldEarned: earned });
-    const ng = gold + earned;
-    materialsRef.current = {}; setMaterials({}); setGold(ng);
-    persist(player, ng, potions, inventory, xp, points, cargados);
+    askConfirm(t("sell.confirmMats", { n: earned }), () => {
+      const soldCount = Object.values(materials).reduce((a, b) => a + b, 0);
+      statsRef.current = mergeStats(statsRef.current, { itemsSold: soldCount, goldEarned: earned });
+      const ng = gold + earned;
+      materialsRef.current = {}; setMaterials({}); setGold(ng);
+      persist(player, ng, potions, inventory, xp, points, cargados);
+    });
   }
 
   function sellGear(id: string) {
@@ -317,10 +320,11 @@ export function App() {
     const seen = new Set<string>(); const kept: WeaponOpt[] = []; let earned = 0;
     for (const w of inventory) { if (seen.has(w.id)) earned += sellValue(w); else { seen.add(w.id); kept.push(w); } }
     if (earned <= 0) return;
-    if (!window.confirm(t("sell.confirmDupes", { n: earned }))) return;   // confirmación anti-venta accidental
-    statsRef.current = mergeStats(statsRef.current, { itemsSold: inventory.length - kept.length, goldEarned: earned });
-    const ng = gold + earned;
-    setInventory(kept); setGold(ng); persist(player, ng, potions, kept, xp, points, cargados);
+    askConfirm(t("sell.confirmDupes", { n: earned }), () => {
+      statsRef.current = mergeStats(statsRef.current, { itemsSold: inventory.length - kept.length, goldEarned: earned });
+      const ng = gold + earned;
+      setInventory(kept); setGold(ng); persist(player, ng, potions, kept, xp, points, cargados);
+    });
   }
   function sellWeapon(id: string) {
     if (!player) return;
@@ -426,6 +430,17 @@ export function App() {
       {showTutorial && <ScrollTutorial onDone={() => setShowTutorial(false)} />}
       {showUmbral && <UmbralRitual onDone={() => setShowUmbral(false)} />}
       {titleRitual && <TitleRitual title={titleRitual} onDone={() => { setTitleRitual(null); if (pendingUmbralRef.current) { pendingUmbralRef.current = false; setShowUmbral(true); } }} />}
+      {confirmDialog && (
+        <div onClick={() => setConfirmDialog(null)} style={{ position: "fixed", inset: 0, zIndex: 900, background: "rgba(6,4,3,.74)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: 340, maxWidth: "92vw", background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 14, padding: "20px 20px 16px", boxShadow: "0 20px 50px rgba(0,0,0,.6)" }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 15.5, lineHeight: 1.5, color: "var(--ink)", marginBottom: 18 }}>{confirmDialog.text}</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="ghost" style={{ flex: 1 }} onClick={() => setConfirmDialog(null)}>{getLang() === "es" ? "Cancelar" : "Cancel"}</button>
+              <button className="primary" style={{ flex: 1 }} onClick={() => { const cb = confirmDialog.onYes; setConfirmDialog(null); cb(); }}>{getLang() === "es" ? "Confirmar" : "Confirm"}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {cargadoMsg && screen === "hub" && <div className="cargadomsg" onClick={() => setCargadoMsg(null)}>{cargadoMsg} <span className="soft">(toca para cerrar)</span></div>}
 
       {screen === "loading" && (

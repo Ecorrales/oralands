@@ -12,6 +12,7 @@ import { getAbility } from "../engine";
 
 export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventory: WeaponOpt[]) => void }) {
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState(false);
   const [stats, setStats] = useState<Characteristics>({ strength: 5, vitality: 5, dexterity: 5, intelligence: 5 });
   const [weaponId, setWeaponId] = useState("club");
 
@@ -35,6 +36,7 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
   const canStart = name.trim().length > 0;
 
   function start() {
+    if (name.trim().length === 0) { setNameError(true); return; }
     const w = effectiveWeapon;
     const player = makeCreature(name.trim(), { ...stats }, 1, toWeapon(w), []);
     onCreate(player, [w]);   // arranca con su arma en el inventario
@@ -44,7 +46,8 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
     <div className="panel">
       <div className="cap">Nombre</div>
       <input className="tinput" type="text" value={name} maxLength={24}
-        placeholder={t("create.namePrompt")} onChange={(e) => setName(e.target.value)} />
+        placeholder={t("create.namePrompt")} onChange={(e) => { setName(e.target.value); if (nameError) setNameError(false); }} />
+      {nameError && <div style={{ color: "var(--danger)", fontSize: 13, fontFamily: "Georgia, serif", fontStyle: "italic", marginTop: 6, lineHeight: 1.4 }}>{t("create.needName")}</div>}
 
       <div className="cap">Reparte tus puntos <span className="soft">{t("create.minMax")}</span></div>
       <p className="statintro">{t("create.hint1")}</p>
@@ -85,7 +88,7 @@ export function CharacterCreate({ onCreate }: { onCreate: (p: Creature, inventor
         })}
       </div>
 
-      <button className="begin" disabled={!canStart} onClick={start}>Entrar a la cripta</button>
+      <button className="begin" onClick={start}>Entrar a la cripta</button>
       <p className="foot">{t("create.hint2")}</p>
     </div>
   );

@@ -134,6 +134,8 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
 
   function selectTarget(i: number) { const s = b.current; if (s.phase === "player" && !isDead(s.enemies[i])) { s.target = i; force(); } }
   const cStats = useRef<Partial<CharStats>>({});
+  const logRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = logRef.current; if (el) el.scrollTop = el.scrollHeight; });   // auto-scroll del log al último registro
   const cMap = (k: keyof CharStats, sub: string, n = 1) => { const m = ((cStats.current as any)[k] ??= {}) as Record<string, number>; m[sub] = (m[sub] ?? 0) + n; };
   const cInc = (k: keyof CharStats, n = 1) => { (cStats.current as any)[k] = (((cStats.current as any)[k] as number) ?? 0) + n; };
 
@@ -305,7 +307,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
         <div className="mods">{s.player.modifiers.map((m, i) => <EffectTooltip key={i} info={explainModifier(m)} color={EFFECT_COLOR[m.label] ?? "var(--accent)"}><span className={"pill " + pillClass(m)}>{tName(m.label)} {m.duration}t</span></EffectTooltip>)}</div>
       </div>
 
-      <div className="log">{s.log.map((l, i) => <p key={i} style={{ color: l.color }}>{l.text}</p>)}</div>
+      <div className="log" ref={logRef}>{s.log.map((l, i) => <p key={i} style={{ color: l.color }}>{l.text}</p>)}</div>
 
       <div className="actions">
         {s.phase !== "over" ? (
