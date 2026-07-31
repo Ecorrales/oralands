@@ -83,8 +83,8 @@ export function explainEffect(abilityId: string, user: Creature, target?: Creatu
         if (chance !== undefined) body += chanceLine(chance);
       } else {
         body = es
-          ? "Abre una herida que sangra varios turnos. El daño por turno depende de la vitalidad del enemigo: mientras más vitalidad, sangra más fuerte pero por menos turnos."
-          : "Opens a wound that bleeds for several turns. Damage per turn depends on the enemy's vitality: the tougher it is, the harder it bleeds but for fewer turns.";
+          ? "Abre una herida que sangra 4 turnos. El daño por turno es proporcional a la vida máxima del enemigo (5% cada turno), así que hace mella igual en criaturas pequeñas o colosales."
+          : "Opens a wound that bleeds for 4 turns. Damage per turn scales with the enemy's max health (5% each turn), so it bites just as hard on small or colossal creatures.";
       }
       break;
     }
