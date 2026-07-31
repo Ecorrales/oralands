@@ -201,6 +201,7 @@ const DICT: Record<string, Entry> = {
   "kind.undead": { es: "no-muerto", en: "undead" },
   "kind.rodent": { es: "alimaña", en: "vermin" },
   "kind.beast": { es: "bestia", en: "beast" },
+  "kind.aberration": { es: "aberración", en: "aberration" },
   "dungeon.stalkerNamed": { es: "☠ Un némesis acecha esta cripta: {name} (Nv {level}).", en: "☠ A nemesis stalks this crypt: {name} (Lv {level})." },
   "dungeon.stalkerAnon": { es: "☠ Un némesis acecha esta cripta.", en: "☠ A nemesis stalks this crypt." },
   "dungeon.ambushSearch": { es: "¡Emboscada! Te descubrieron mientras rebuscabas la sala.", en: "Ambush! You were caught while searching the room." },
