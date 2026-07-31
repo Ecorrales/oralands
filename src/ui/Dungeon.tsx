@@ -264,6 +264,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
     if (!res.survived) { onDeath(group, wasCargado); return; }
     if (wasCargado) { defeatCargado(wasCargado); setFightingCargado(null); awardKill(group); }
     else awardKill(group);
+    // el MÍMICO se disfrazó de tesoro: al vencerlo, suelta su botín (el oro que imitaba).
+    if (group.some((e) => (e.tags ?? []).includes("aberration"))) {
+      const hoard = rollChestGold(depth.current, stage);
+      runGoldRef.current += hoard; setRunGold(runGoldRef.current); setRoomGold(hoard);
+      noGoldLine.current = "";
+    }
     sBump("roomsCleared"); sMap("weaponUses", working.current.weapon.id ?? "?");
     const kind = enemyKind(group[0] ?? working.current);
     const mats = rollRoomMaterials(kind, depth.current);
