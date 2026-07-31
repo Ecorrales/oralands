@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { statAbbr, t, tName, abilityName } from "../game/i18n";
 import type { Creature, Characteristics } from "../engine";
 import { getAbility, recomputeDerived, ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
-import { makeDungeonGroup, rollRoomCount, enemyKind } from "../game/enemies";
+import { makeDungeonGroup, rollRoomCount, enemyKind, makeMimic } from "../game/enemies";
 import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
 import { DungeonEntry } from "./DungeonEntry";
@@ -33,7 +33,16 @@ export interface RunResult {
   runStats?: Partial<CharStats>;   // deltas de estadísticas de esta bajada
 }
 
-type Phase = "fight" | "cleared" | "camp" | "ambush" | "result";
+type Phase = "fight" | "cleared" | "camp" | "ambush" | "result" | "chest";
+type ChestType = "tesoro" | "trampa" | "mimic";
+
+const CHEST_FLOOR_CHANCE = 0.15;      // prob. de que un piso tenga UN cofre
+const CHEST_INVESTIGATE_FRAC = 0.5;   // investigar cuesta 50% de la energía máxima (redondeo arriba)
+const CHEST_TRAP_HP_FRAC = 0.15;      // trampa a ciegas = 15% de la vida máxima
+// decide en qué cuarto del piso cae el cofre (o -1 = sin cofre). Cualquier cuarto, incluido el primero.
+const rollChestRoom = (rooms: number): number => Math.random() < CHEST_FLOOR_CHANCE ? Math.floor(Math.random() * rooms) : -1;
+const rollChestOutcome = (): ChestType => (["tesoro", "trampa", "mimic"] as ChestType[])[Math.floor(Math.random() * 3)];
+const rollChestGold = (depth: number): number => Math.round(50 + depth * 6 + Math.random() * 30);
 
 export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, dungeonId, startStage, unlockedFloors, onUnlockFloor, onCheckpoint, onExit }: {
   player: Creature; potions: number; inventory: WeaponOpt[]; xp: number; points: number; cargados: Cargado[];
@@ -44,16 +53,24 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
 }) {
   const [, force] = useReducer((x) => x + 1, 0);
   const [stage, setStage] = useState(resume?.stage ?? startStage ?? 1);
-  const [stageRooms, setStageRooms] = useState(() => resume?.stageRooms ?? rollRoomCount());
+  const initialRooms = resume?.stageRooms ?? rollRoomCount();
+  const [stageRooms, setStageRooms] = useState(initialRooms);
   const [roomInStage, setRoomInStage] = useState(resume?.roomInStage ?? 0);
   const depth = useRef(resume?.depth ?? (startStage && startStage > 1 ? (startStage - 1) * 5 : 0));
   const dungeon = useRef(resume ? dungeonById(resume.dungeonId) : (dungeonId ? dungeonById(dungeonId) : pickDungeon()));
+  // cofre del piso: en qué cuarto cae (-1 = ninguno). No se persiste entre recargas (v1).
+  const chestRoom = useRef<number>(resume ? -1 : rollChestRoom(initialRooms));
+  const [chestType, setChestType] = useState<ChestType | null>(resume ? null : (chestRoom.current === 0 ? rollChestOutcome() : null));
+  const [chestSeen, setChestSeen] = useState(false);   // ¿investigaste? (revela el contenido)
+  const [chestDone, setChestDone] = useState(false);   // ¿resuelto? (muestra botón continuar)
+  const [chestMsg, setChestMsg] = useState<string>("");
+  const [mimicOpen, setMimicOpen] = useState<"player" | "enemy" | undefined>(undefined);
   const [group, setGroup] = useState<Creature[]>(() => resume ? [] : makeDungeonGroup(0, 1, dungeon.current.kinds));
   const [fightingCargado, setFightingCargado] = useState<Cargado | null>(null);
   const [pendingNemesis, setPendingNemesis] = useState<Cargado | null>(null);          // némesis esperando su ritual de iniciativa
   const [confirmEquip, setConfirmEquip] = useState<WeaponOpt | null>(null);            // confirmación antes de cambiar de arma
   const [nemesisOpenWith, setNemesisOpenWith] = useState<"player" | "enemy" | undefined>(undefined);
-  const [phase, setPhase] = useState<Phase>(resume?.phase ?? "fight");
+  const [phase, setPhase] = useState<Phase>(resume?.phase ?? (chestRoom.current === 0 ? "chest" : "fight"));
   const [outcome, setOutcome] = useState<"won" | "dead">("won");
   const [entering, setEntering] = useState(!resume);   // transición de entrada solo en bajadas nuevas
   const [runGold, setRunGold] = useState(resume?.runGold ?? 0);
@@ -206,10 +223,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   }
   function onDeath(killers: Creature[], defeatedBy: Cargado | null) {
     const awakened = wp.level >= NEMESIS_AWAKEN_LEVEL;
+    // los MÍMICOS (aberraciones) solo salen de cofres: nunca se gradúan a némesis territorial.
+    const killerIsMimic = killers.some((k) => (k.tags ?? []).includes("aberration"));
     if (defeatedBy) {
       // te ganó un némesis que ya existía: sube de nivel ESE mismo — pero solo si el sistema está despierto (nv22+)
       if (awakened) leveledCargado.current = levelUpCargado(defeatedBy, wp.level);
-    } else if (killers.length > 0) {
+    } else if (killers.length > 0 && !killerIsMimic) {
       // LÍMITE TERRITORIAL: si esta mazmorra YA tiene un guardián, ese sube de nivel (no nace otro).
       const guardian = cargados.find((c) => cargadoHome(c) === dungeon.current.id);
       if (guardian) {
@@ -278,13 +297,62 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   function advance() {
     setTrapMsg(null); setTrapAlert(null); setKeyAlert(null);
     if (springTrapIfAny()) return;
-    depth.current += 1; setRoomInStage((r) => r + 1);
+    depth.current += 1;
+    const nextRoom = roomInStage + 1;
+    setRoomInStage(nextRoom);
     working.current = { ...working.current, energy: working.current.maxEnergy };
-    beginEncounter(nextFight(depth.current, stage));
+    if (nextRoom === chestRoom.current) enterChest();
+    else beginEncounter(nextFight(depth.current, stage));
   }
+
+  // ── COFRES ──────────────────────────────────────────────────────────────
+  /** Entra a una sala de cofre: decide el contenido y muestra la tarjeta cerrada. */
+  function enterChest() {
+    setChestType(rollChestOutcome());
+    setChestSeen(false); setChestDone(false); setChestMsg("");
+    setMimicOpen(undefined);
+    setPhase("chest");
+  }
+  /** Investigar: cuesta 50% de la energía máxima (redondeo arriba), revela el contenido. */
+  function chestInvestigate() {
+    const cost = Math.ceil(working.current.maxEnergy * CHEST_INVESTIGATE_FRAC);
+    if (working.current.energy < cost) return;
+    working.current = { ...working.current, energy: working.current.energy - cost };
+    setChestSeen(true);
+    const key = chestType === "tesoro" ? "chest.hint.tesoro" : chestType === "trampa" ? "chest.hint.trampa" : "chest.hint.mimic";
+    setChestMsg(t(key)); force();
+  }
+  /** Abrir: resuelve según el contenido. */
+  function chestOpen() {
+    if (chestType === "tesoro") {
+      const g = rollChestGold(depth.current);
+      runGoldRef.current += g; setRunGold(runGoldRef.current); setRoomGold(g);
+      setChestMsg(t("chest.result.tesoro", { n: g })); setChestDone(true);
+    } else if (chestType === "trampa") {
+      if (chestSeen) {                         // investigada → desarmada: sin daño + un poco de oro
+        const g = Math.round(rollChestGold(depth.current) * 0.4);
+        runGoldRef.current += g; setRunGold(runGoldRef.current); setRoomGold(g);
+        setChestMsg(t("chest.result.trapDisarmed", { n: g })); setChestDone(true);
+      } else {                                 // a ciegas → daño (% de vida máxima)
+        const dmg = Math.max(1, Math.round(working.current.maxHp * CHEST_TRAP_HP_FRAC));
+        working.current = { ...working.current, hp: Math.max(0, working.current.hp - dmg) };
+        sBump("trapsSprung");
+        if (working.current.hp <= 0) { onDeath([], null); return; }
+        setChestMsg(t("chest.result.trapSprung", { n: dmg })); setChestDone(true); force();
+      }
+    } else {                                   // mímico → combate real
+      setGroup([makeMimic(depth.current, stage)]);
+      setFightingCargado(null);
+      setMimicOpen(chestSeen ? "player" : "enemy");   // investigado = tú primero; a ciegas = él primero
+      setPhase("fight");
+    }
+  }
+  /** Seguir de largo: deja el cofre intacto. */
+  function chestLeave() { setChestMsg(t("chest.result.left")); setChestDone(true); }
+
   /** Arranca un encuentro: si es némesis, primero su ritual de iniciativa (sin montar combate). */
   function beginEncounter(nf: { enemies: Creature[]; cargado: Cargado | null }) {
-    setGroup(nf.enemies); setFightingCargado(nf.cargado);
+    setGroup(nf.enemies); setFightingCargado(nf.cargado); setMimicOpen(undefined);
     // ritual de iniciativa SOLO para némesis despierto (jugador nv22+); el menor pelea sin ceremonia
     if (nf.cargado && working.current.level >= NEMESIS_AWAKEN_LEVEL) { setPendingNemesis(nf.cargado); }
     else { setNemesisOpenWith(undefined); setPhase("fight"); }
@@ -317,9 +385,13 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   function breakCamp() { setResting(false); onCheckpoint(buildRun({ phase: "camp", resting: false })); }
   function continueDeeper() {
     const ns = stage + 1; sMax("deepestFloor", ns);
-    depth.current += 1; setStage(ns); setStageRooms(rollRoomCount()); setRoomInStage(0);
+    depth.current += 1; setStage(ns);
+    const rooms = rollRoomCount(); setStageRooms(rooms);
+    chestRoom.current = rollChestRoom(rooms);   // ¿este piso nuevo tiene cofre? ¿en qué cuarto?
+    setRoomInStage(0);
     working.current = { ...working.current, energy: working.current.maxEnergy }; setResting(false);
-    beginEncounter(nextFight(depth.current, ns));
+    if (chestRoom.current === 0) enterChest();
+    else beginEncounter(nextFight(depth.current, ns));
   }
   function campSpend(k: keyof Characteristics) {
     if (pointsRef.current <= 0) return;
@@ -435,9 +507,73 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
       {phase === "fight" && (
         <>
           {fightingCargado && <div className="cargadobanner">☠ {fightingCargado.creature.name} (Nv {fightingCargado.creature.level}) — el némesis que se llevó tu botín. Véncelo para recuperarlo.</div>}
-          <Combat key={`s${stage}r${roomInStage}`} player={wp} enemies={group} potions={potionsRef.current} openWith={fightingCargado ? nemesisOpenWith : undefined} onEnd={handleCombatEnd} />
+          <Combat key={`s${stage}r${roomInStage}`} player={wp} enemies={group} potions={potionsRef.current} openWith={fightingCargado ? nemesisOpenWith : mimicOpen} onEnd={handleCombatEnd} />
         </>
       )}
+
+      {phase === "chest" && (() => {
+        const invCost = Math.ceil(wp.maxEnergy * CHEST_INVESTIGATE_FRAC);
+        const revealed = chestSeen || chestDone;
+        const danger = revealed && (chestType === "trampa" || chestType === "mimic");
+        const col = danger ? "var(--danger)" : "var(--accent)";
+        const cardName = !revealed ? t("chest.name")
+          : chestType === "tesoro" ? t("chest.name.tesoro")
+          : chestType === "trampa" ? t("chest.name.trampa") : t("chest.name.mimic");
+        const isMimicRevealed = revealed && chestType === "mimic";
+        return (
+          <>
+            <div className="chestcard" style={{ border: `1.5px solid ${col}`, borderRadius: 14, padding: "16px 14px", textAlign: "center", marginBottom: 14 }}>
+              <svg width="70" height="58" viewBox="0 0 76 62" fill="none" stroke={col} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto" }}>
+                {isMimicRevealed ? (
+                  <>
+                    <rect x="12" y="30" width="52" height="26" rx="3.5" />
+                    <path d="M12 28 Q38 12 64 28" />
+                    <path d="M14 30 l5 -6 l5 6 l5 -6 l5 6 l5 -6 l5 6 l5 -6 l5 6 l5 -6 l5 6" strokeWidth="2" />
+                    <path d="M30 44 Q38 50 46 44" strokeWidth="2" />
+                  </>
+                ) : (
+                  <>
+                    <rect x="12" y="26" width="52" height="30" rx="3.5" />
+                    <path d="M12 32 Q38 13 64 32" />
+                    <line x1="12" y1="37" x2="64" y2="37" />
+                    <rect x="34" y="33" width="8" height="9" rx="1.5" fill={col} stroke="none" />
+                  </>
+                )}
+              </svg>
+              <div className="chestname" style={{ fontWeight: 700, fontSize: 16, marginTop: 8, color: danger ? "var(--danger)" : "var(--ink)" }}>{cardName}</div>
+              {isMimicRevealed && <div className="chestsub" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2 }}>{t("chest.mimicSub")}</div>}
+            </div>
+
+            <div className="bar" style={{ margin: "10px 0 4px" }}><div style={{ width: hpBar(wp), background: hpColor(wp) }} /></div>
+            <div className="hprest">{Math.max(0, Math.round(wp.hp))} / {wp.maxHp} ♥</div>
+            <div className="bar" style={{ margin: "10px 0 4px" }}><div style={{ width: (wp.energy / wp.maxEnergy * 100) + "%", background: "var(--energy)" }} /></div>
+            <div className="hprest">{wp.energy} / {wp.maxEnergy} ⚡</div>
+
+            {chestMsg && <div className="chestlog" style={{ background: "var(--panel2, #1b1610)", border: "1px solid var(--line)", borderRadius: 12, padding: "12px 14px", margin: "12px 0", fontSize: 13.5, lineHeight: 1.6, color: danger ? "var(--danger)" : "var(--ink)" }}>{chestMsg}</div>}
+
+            <div className="actions" style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 9 }}>
+              {chestDone ? (
+                isLastOfStage
+                  ? <button className="primary" onClick={goCamp}>{t("dungeon.toCamp")}</button>
+                  : <button className="primary" onClick={advance}>{t("dungeon.advanceToRoom", { n: roomInStage + 2 })}</button>
+              ) : !chestSeen ? (
+                <>
+                  <button className="primary" onClick={chestOpen}>{t("chest.open")}</button>
+                  <button className="ghost" disabled={wp.energy < invCost} onClick={chestInvestigate}>{t("chest.investigate", { n: invCost })}</button>
+                  <button className="ghost" onClick={chestLeave}>{t("chest.leave")}</button>
+                </>
+              ) : (
+                <>
+                  <button className="primary" onClick={chestOpen}>
+                    {chestType === "tesoro" ? t("chest.openTesoro") : chestType === "trampa" ? t("chest.openTrampa") : t("chest.face")}
+                  </button>
+                  <button className="ghost" onClick={chestLeave}>{t("chest.leave")}</button>
+                </>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {phase === "ambush" && ambushGroup && (
         <>
