@@ -153,7 +153,12 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
     tgt.hp = Math.max(0, tgt.hp - dealt);
     doShake(ti); spawnFloat(ti, "-" + dealt, "#e8635a");
     pushLog(t("combat.log.playerHit", { name: s.player.name, ability: abilityName(ab.id), chance: r.chance, dmg: dealt, target: tName(tgt.name) }), "var(--accent)");
-    if (r.modifiers.length && tgt.hp > 0) { tgt.modifiers.push(...r.modifiers); pushLog(t("combat.log.effectOn", { effect: tName(r.effect!.label), chance: r.effect!.chance, target: tName(tgt.name) }), "var(--warn)"); }
+    if (r.modifiers.length && tgt.hp > 0) {
+      tgt.modifiers.push(...r.modifiers);
+      const critBleed = r.modifiers.find((m) => m.crit);
+      if (critBleed) pushLog(t("combat.log.critBleed", { target: tName(tgt.name) }), "var(--danger)");
+      else pushLog(t("combat.log.effectOn", { effect: tName(r.effect!.label), chance: r.effect!.chance, target: tName(tgt.name) }), "var(--warn)");
+    }
     if (isDead(tgt)) { pushLog(t("combat.log.defeated", { name: tName(tgt.name) }), "var(--success)"); if (allDead()) return endGame(true); s.target = firstAlive(); }
     force();
   }
