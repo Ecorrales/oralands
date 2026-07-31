@@ -34,7 +34,7 @@ export function makeDungeonEnemy(depth: number, level = 1, kinds?: EnemyKind[]):
 // El MÍMICO: fuera del pool aleatorio (solo aparece de los cofres). Tanque lento con mordida y golpe de tapa.
 const MIMIC: Template = {
   name: "Mímico", kind: "aberration", tags: ["aberration"],
-  ch: { strength: 5, vitality: 6, dexterity: 3, intelligence: 2 },
+  ch: { strength: 5, vitality: 8, dexterity: 6, intelligence: 5 },
   weapon: { name: "fangs", damage: "1d5", accuracy: "2d5", abilities: ["mimic_bite", "mimic_slam"] },
 };
 /** Crea un mímico escalado por profundidad (mismo escalado que el resto de enemigos). */
