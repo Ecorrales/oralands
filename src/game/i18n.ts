@@ -25,6 +25,8 @@ export function setLang(l: Lang): void {
 /** Diccionario. Clave -> { es, en }. Si falta la clave, devuelve la clave (para detectar huecos). */
 type Entry = { es: string; en: string };
 const DICT: Record<string, Entry> = {
+  "effect.corteProfundo": { es: "corte profundo", en: "deep cut" },
+  "combat.log.critBleed": { es: "¡Corte profundo! La herida de {target} no deja de manar.", en: "Deep cut! {target}'s wound won't stop flowing." },
   "hub.town": { es: "El Pueblo", en: "Town" },
   "create.needName": { es: "Identifícate, forastero. El calabozo no recibe a los sin nombre.", en: "Identify yourself, stranger. The dungeon does not receive the nameless." },
   "select.nemesisWaits": { es: "{name} te acecha aquí", en: "{name} lurks here" },
