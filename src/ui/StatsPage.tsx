@@ -8,7 +8,7 @@ interface Stats {
   maxGold: number; avgGold: number;
   maxNemesis: number; deepestRun: number;
   strongestNemesis: { name: string; level: number };
-  top10: { rank: number; name: string; level: number; gold: number; maxDepth: number }[];
+  top10: { rank: number; name: string; title?: string | null; level: number; gold: number; maxDepth: number }[];
 }
 
 export function StatsPage({ onBack }: { onBack: () => void }) {
@@ -51,7 +51,10 @@ export function StatsPage({ onBack }: { onBack: () => void }) {
             {stats.top10.map((p) => (
               <div className="toprow" key={p.rank}>
                 <span className="toprank">#{p.rank}</span>
-                <span className="topname">{p.name}</span>
+                <span className="topname">
+                  {p.name}
+                  {p.title && <span style={{ display: "block", color: "var(--accent)", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11.5, fontWeight: 400, letterSpacing: ".01em", lineHeight: 1.2 }}>{p.title}</span>}
+                </span>
                 <span className="topmeta">{t("common.lvAbbr")} {p.level} · ◈ {p.gold}</span>
               </div>
             ))}
