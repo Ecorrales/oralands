@@ -99,6 +99,16 @@ export const ABILITIES: Record<string, AbilitySpec> = {
     damage: (u, _t, wr) => clamp(wr * (u.strength / 2), u.strength / 2, Infinity),
     effect: { name: "bleeding", label: "sangrado", chance: (u, t) => bleedChance(u, t), make: (t) => bleeding(t) },
   },
+  mimic_bite: {
+    id: "mimic_bite", name: "Mordida Voraz", desc: "Fauces que desgarran la carne. Puede causar sangrado.", energyCost: 2, accMod: 0,
+    damage: (u, t, wr) => { const base = wr * u.strength; return clamp(base + (unarm(t) ? 1 : 0) * 0.05 * base * 1.15, u.strength / 2, Infinity); },
+    effect: { name: "bleeding", label: "sangrado", chance: (u, t) => bleedChance(u, t), make: (t) => bleeding(t) },
+  },
+  mimic_slam: {
+    id: "mimic_slam", name: "Golpe de Tapa", desc: "Azota su tapa como una mandíbula. Puede aturdir.", energyCost: 2, accMod: 0,
+    damage: (u, _t, wr) => clamp(wr * u.strength, u.strength / 2, Infinity),
+    effect: { name: "knockdown", label: "aturdido", chance: (u, t) => knockChance(u, t), make: () => knockdown() },
+  },
 };
 
 export const getAbility = (id: string): AbilitySpec | undefined => ABILITIES[id];
