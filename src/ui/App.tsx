@@ -24,7 +24,7 @@ import { canForge, type Recipe } from "../game/forge";
 import { mergeMats, matSell, type Mats } from "../game/materials";
 import { MAX_CARGADOS, cargadoHome, type Cargado } from "../game/cargados";
 import { emptyStats, mergeStats, subtractStats, milestoneCrossed, type CharStats } from "../game/charStats";
-import { computeTitle, founderTitle, type AwardedTitle } from "../game/titles";
+import { computeTitle, founderTitle, type AwardedTitle, type Baselines } from "../game/titles";
 import { TitleRitual } from "./TitleRitual";
 import { type AccountData } from "../store/PlayerStore";
 import type { RunResult } from "./Dungeon";
@@ -65,6 +65,7 @@ export function App() {
   const maxDepthRef = useRef<number>(0);
   const statsRef = useRef<CharStats>(emptyStats());
   const titlesRef = useRef<AwardedTitle[]>([]);
+  const baselinesRef = useRef<Baselines | null>(null);
   const statsSnapshotRef = useRef<CharStats | null>(null);
   const accountRef = useRef<AccountData>({});
   const unlockedFloorsRef = useRef<Record<string, number[]>>({});
@@ -126,6 +127,14 @@ export function App() {
     } else setScreen("create");
   }
   const loadFromStore = () => { store.load().then(hydrate); store.loadAccount?.().then((a) => { accountRef.current = a ?? {}; }); };
+
+  // baselines vivos: "lo normal" real de la comunidad, para calibrar los títulos (si falla, el motor usa los de fábrica)
+  useEffect(() => {
+    fetch("https://oralands-default-rtdb.firebaseio.com/stats/global/baselines.json", { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((b) => { if (b && typeof b === "object") baselinesRef.current = b as Baselines; })
+      .catch(() => {});
+  }, []);
 
   // Sesión de Firebase (login con Google). Solo activo cuando Firebase está conectado.
   const [auth, setAuth] = useState<AuthInfo | null>(null);
@@ -396,7 +405,7 @@ export function App() {
       if (ms) {
         const tramo = statsSnapshotRef.current ? subtractStats(statsRef.current, statsSnapshotRef.current) : statsRef.current;
         const levels = statsSnapshotRef.current ? 20 : next.level;   // 1er título = todo su ascenso
-        awarded = computeTitle(tramo, next.level, next.name, levels);
+        awarded = computeTitle(tramo, next.level, next.name, levels, baselinesRef.current);
         titlesRef.current = [...titlesRef.current, awarded];
         statsSnapshotRef.current = statsRef.current;   // nueva foto para el próximo tramo
       }
