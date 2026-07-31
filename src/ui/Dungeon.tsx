@@ -36,7 +36,7 @@ export interface RunResult {
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result" | "chest";
 type ChestType = "tesoro" | "trampa" | "mimic";
 
-const CHEST_FLOOR_CHANCE = 0.15;      // prob. de que un piso tenga UN cofre
+const CHEST_FLOOR_CHANCE = 0.2;      // prob. de que un piso tenga UN cofre
 const CHEST_INVESTIGATE_FRAC = 0.5;   // investigar cuesta 50% de la energía máxima (redondeo arriba)
 const CHEST_TRAP_HP_FRAC = 0.15;      // trampa a ciegas = 15% de la vida máxima
 // decide en qué cuarto del piso cae el cofre (o -1 = sin cofre). Cualquier cuarto, incluido el primero.

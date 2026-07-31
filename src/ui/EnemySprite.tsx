@@ -31,6 +31,14 @@ export function EnemySprite({ enemy, dead }: { enemy: Creature; dead: boolean })
           <path d="M21 32h6l-3 4z" fill="currentColor" stroke="none" />
         </svg>
       )}
+      {kind === "aberration" && (
+        <svg width="56" height="56" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="8" y="22" width="32" height="16" rx="2.5" />
+          <path d="M8 20 Q24 8 40 20" />
+          <path d="M9 22 l3.5 -4 l3.5 4 l3.5 -4 l3.5 4 l3.5 -4 l3.5 4 l3.5 -4 l3.5 4 l3.5 -4 l3.5 4" strokeWidth={1.6} />
+          <path d="M19 30 Q24 34 29 30" strokeWidth={1.6} />
+        </svg>
+      )}
     </div>
   );
 }

@@ -23,7 +23,7 @@ interface Battle {
   shakePlayer: boolean; flashPlayer: boolean;
   shake: boolean[]; flash: boolean[];
 }
-const KIND_ES: Record<string, string> = { undead: t("kind.undead"), rodent: t("kind.rodent"), beast: t("kind.beast") };
+const KIND_ES: Record<string, string> = { undead: t("kind.undead"), rodent: t("kind.rodent"), beast: t("kind.beast"), aberration: t("kind.aberration") };
 const avgDice = (spec: string): number => { const m = /^(\d+)d(\d+)$/.exec((spec ?? "").trim()); return m ? +m[1] * (+m[2] + 1) / 2 : 0; };
 const pillClass = (m: Modifier) => m.kind === "skip" ? "stun" : m.kind === "stat" ? "debuff" : "dot";
 const movesOf = (c: Creature): AbilitySpec[] => {
