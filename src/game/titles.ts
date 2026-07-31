@@ -17,8 +17,6 @@ export interface AwardedTitle {
 // ── Baselines: "lo normal" para cada señal (ratios). Constantes TUNEABLES; a futuro pueden salir
 //    del promedio global real de la comunidad. ──
 const DEFAULT_B = {
-  speciesDominance: 0.5,   // una especie que sea >50% de tus kills empieza a ser tu sello
-  speciesBoost: 3,         // refuerzo para que un sello fuerte de especie compita con ejes que escalan sin techo
   roomsPerLevel: 3.0,
   deathsPerLevel: 0.4,
   searchPerRoom: 0.5,
@@ -62,22 +60,12 @@ const NAME: Record<string, { es: string; en: string }> = {
 };
 
 const nm = (id: string) => {
-  if (id.startsWith("species_bane:")) {
-    const sp = id.slice("species_bane:".length);
-    return ES() ? `Azote de ${sp}` : `Bane of the ${sp}`;
-  }
   return (ES() ? NAME[id]?.es : NAME[id]?.en) ?? id;
 };
 
 // ── Plantillas de "porqué" por título (pool para rotar). {p} = nombre del jugador. ──
 function whyFor(id: string, p: string): string {
   const es = ES();
-  if (id.startsWith("species_bane:")) {
-    const sp = id.slice("species_bane:".length);
-    return es
-      ? `${p}, el calabozo te reconoce como {t}. Pocas criaturas has cazado con tal saña como a los de su clase: donde otros ven un enemigo, tú ves una presa conocida.`.replace("{t}", nm(id).toUpperCase())
-      : `${p}, the dungeon knows you as {t}. Few creatures have you hunted with such fury as these: where others see a foe, you see familiar prey.`.replace("{t}", nm(id).toUpperCase());
-  }
   const pool: Record<string, { es: string[]; en: string[] }> = {
     crush: { es: [`${p}, el calabozo te reconoce como {t}. No hay yelmo ni hueso que resista tu golpe: aplastas lo que se te pone enfrente, una y otra vez.`], en: [`${p}, the dungeon knows you as {t}. No helm nor bone withstands your blow: you crush all that stands before you.`] },
     smash: { es: [`${p}, se te conoce como {t}. Tu fuerza bruta es tu palabra: golpeas hasta que algo cede.`], en: [`${p}, you are known as {t}. Brute force is your word: you strike until something breaks.`] },
@@ -151,17 +139,6 @@ export function computeTitle(s: Partial<CharStats>, level: number, player: strin
   // COMBATE / némesis
   consider("nemesis_hunter", "combate", dev(num(s.nemesisSlain) / L, B.nemesisPerLevel), 0.5);
 
-  // ESPECIE DOMINANTE: si una especie acapara tus kills, se vuelve tu sello ("Azote de {especie}s")
-  const species = s.killsBySpecies ?? {};
-  const topSp = topKey(species);
-  const totalKills = Math.max(1, num(s.killsTotal));
-  if (topSp) {
-    const share = (species[topSp] ?? 0) / totalKills;
-    if (share >= B.speciesDominance) {
-      const strength = dev(share, B.speciesDominance) * B.speciesBoost;
-      if (strength >= 0.35) cands.push({ id: "species_bane:" + topSp, axis: "combate", strength });
-    }
-  }
 
   // el candidato más fuerte gana
   cands.sort((a, b) => b.strength - a.strength);
