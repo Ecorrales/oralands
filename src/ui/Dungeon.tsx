@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { statAbbr, t, tName, abilityName } from "../game/i18n";
 import type { Creature, Characteristics } from "../engine";
-import { getAbility, recomputeDerived, ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
+import { getAbility, recomputeDerived, getHealthForLevel, ENERGY_MAX, energyRaiseCost, BASE_POTION_SLOTS, MAX_POTION_SLOTS, potionSlotCost } from "../engine";
 import { makeDungeonGroup, rollRoomCount, enemyKind, makeMimic } from "../game/enemies";
 import { pickDungeon, dungeonById } from "../game/dungeons";
 import { rollRoomTrap, trapDamage, type Trap } from "../game/traps";
@@ -36,13 +36,19 @@ export interface RunResult {
 type Phase = "fight" | "cleared" | "camp" | "ambush" | "result" | "chest";
 type ChestType = "tesoro" | "trampa" | "mimic";
 
-const CHEST_FLOOR_CHANCE = 0.2;      // prob. de que un piso tenga UN cofre
+const CHEST_FLOOR_CHANCE = 0.3;      // prob. de que un piso tenga UN cofre
 const CHEST_INVESTIGATE_FRAC = 0.5;   // investigar cuesta 50% de la energía máxima (redondeo arriba)
 const CHEST_TRAP_HP_FRAC = 0.15;      // trampa a ciegas = 15% de la vida máxima
 // decide en qué cuarto del piso cae el cofre (o -1 = sin cofre). Cualquier cuarto, incluido el primero.
 const rollChestRoom = (rooms: number): number => Math.random() < CHEST_FLOOR_CHANCE ? Math.floor(Math.random() * rooms) : -1;
 const rollChestOutcome = (): ChestType => (["tesoro", "trampa", "mimic"] as ChestType[])[Math.floor(Math.random() * 3)];
-const rollChestGold = (depth: number): number => Math.round(50 + depth * 6 + Math.random() * 30);
+// tesoro = la vida que TENDRÍA un mímico aquí ÷ 2 (el premio siente el peligro que esquivaste).
+// mímico: vit base 8 + depth/2 (mismo escalado que makeMimic), nivel = piso.
+const rollChestGold = (depth: number, stage: number): number => {
+  const mimicVit = 8 + Math.floor(depth / 2);
+  const base = getHealthForLevel(mimicVit, stage) / 2;
+  return Math.max(1, Math.round(base * (0.85 + Math.random() * 0.3)));   // ±15% de variación
+};
 
 export function Dungeon({ player, potions, inventory, xp, points, cargados, resume, dungeonId, startStage, unlockedFloors, onUnlockFloor, onCheckpoint, onExit }: {
   player: Creature; potions: number; inventory: WeaponOpt[]; xp: number; points: number; cargados: Cargado[];
@@ -325,12 +331,12 @@ export function Dungeon({ player, potions, inventory, xp, points, cargados, resu
   /** Abrir: resuelve según el contenido. */
   function chestOpen() {
     if (chestType === "tesoro") {
-      const g = rollChestGold(depth.current);
+      const g = rollChestGold(depth.current, stage);
       runGoldRef.current += g; setRunGold(runGoldRef.current); setRoomGold(g);
       setChestMsg(t("chest.result.tesoro", { n: g })); setChestDone(true);
     } else if (chestType === "trampa") {
       if (chestSeen) {                         // investigada → desarmada: sin daño + un poco de oro
-        const g = Math.round(rollChestGold(depth.current) * 0.4);
+        const g = Math.round(rollChestGold(depth.current, stage) * 0.4);
         runGoldRef.current += g; setRunGold(runGoldRef.current); setRoomGold(g);
         setChestMsg(t("chest.result.trapDisarmed", { n: g })); setChestDone(true);
       } else {                                 // a ciegas → daño (% de vida máxima)
