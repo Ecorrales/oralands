@@ -53,7 +53,12 @@ async function main() {
       if (!strongestNemesis || cl > strongestNemesis.level) strongestNemesis = { name: cn, level: cl };
     }
 
-    players.push({ name, level, gold, nemesisCount, maxDepth });
+    // título a lucir en el top10: el de fundador tiene prioridad; si no, el más reciente
+    const _titles = Array.isArray(s.titles) ? s.titles : [];
+    const _shown = _titles.length ? (_titles.find((t) => t && t.founder) ?? _titles[_titles.length - 1]) : null;
+    const title = _shown && typeof _shown.name === "string" ? _shown.name : null;
+
+    players.push({ name, level, gold, nemesisCount, maxDepth, title });
 
     // ratios de comportamiento (nodo stats) → para calibrar los títulos con datos reales
     const st = s.stats && typeof s.stats === "object" ? s.stats : null;
@@ -77,7 +82,7 @@ async function main() {
   const max = (f) => players.reduce((a, p) => Math.max(a, f(p)), 0);
 
   const top10 = [...players].sort((a, b) => b.level - a.level || b.gold - a.gold).slice(0, 10)
-    .map((p, i) => ({ rank: i + 1, name: p.name, level: p.level, gold: p.gold, maxDepth: p.maxDepth }));
+    .map((p, i) => ({ rank: i + 1, name: p.name, title: p.title ?? null, level: p.level, gold: p.gold, maxDepth: p.maxDepth }));
 
   // baselines de títulos = MEDIANA de cada ratio (solo si hay muestra suficiente, para no calibrar con 2 jugadores)
   const MIN_SAMPLE = 5;
