@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import { t, tName, abilityName, abilityDesc } from "../game/i18n";
 import {
-  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics, hitChanceTuned,
+  resolveAbility, getAbility, regenEnergy, isDead, diceroll, mitigate, effectiveCharacteristics, hitChanceTuned, applyModifiers,
   DEFAULT_TUNE, type Creature, type Modifier, type AbilitySpec,
 } from "../engine";
 import { POTION_HEAL_FRACTION, POTION_COST, NEMESIS_AWAKEN_LEVEL } from "../game/catalog";
@@ -154,7 +154,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
     doShake(ti); spawnFloat(ti, "-" + dealt, "#e8635a");
     pushLog(t("combat.log.playerHit", { name: s.player.name, ability: abilityName(ab.id), chance: r.chance, dmg: dealt, target: tName(tgt.name) }), "var(--accent)");
     if (r.modifiers.length && tgt.hp > 0) {
-      tgt.modifiers.push(...r.modifiers);
+      applyModifiers(tgt, r.modifiers);
       const critBleed = r.modifiers.find((m) => m.crit);
       if (critBleed) pushLog(t("combat.log.critBleed", { target: tName(tgt.name) }), "var(--danger)");
       else pushLog(t("combat.log.effectOn", { effect: tName(r.effect!.label), chance: r.effect!.chance, target: tName(tgt.name) }), "var(--warn)");
@@ -228,7 +228,7 @@ export function Combat({ player, enemies, potions, openWith, onEnd }: {
     doShake("player"); spawnFloat("player", "-" + dealt, "#e8635a");
     const neg = r.damage - dealt;
     pushLog(t("combat.log.enemyHit", { name: tName(e.name), ability: abilityName(ability.id), chance: r.chance, dmg: dealt, def: neg > 0 ? t("combat.log.byDefense", { n: neg }) : "" }), "var(--danger)");
-    if (r.modifiers.length && s.player.hp > 0) { s.player.modifiers.push(...r.modifiers); pushLog(t("combat.log.effectOnPlayer", { effect: tName(r.effect!.label), name: s.player.name }), "var(--warn)"); }
+    if (r.modifiers.length && s.player.hp > 0) { applyModifiers(s.player, r.modifiers); pushLog(t("combat.log.effectOnPlayer", { effect: tName(r.effect!.label), name: s.player.name }), "var(--warn)"); }
     if (isDead(s.player)) { force(); return endGame(false); }
     const keepChaining = chains && s.player.hp > 0;
     if (!keepChaining) doneNow();   // si encadena, NO se marca skip: la próxima iteración lo vuelve a elegir
