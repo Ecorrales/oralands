@@ -18,6 +18,31 @@ export interface Modifier {
   crit?: boolean;             // dot: marca de sangrado crítico ("corte profundo")
 }
 
+// familia de un efecto: bleeding y bleeding_crit son el MISMO efecto (quita el sufijo _crit)
+const modFamily = (m: Modifier): string => m.name.replace(/_crit$/, "");
+
+/**
+ * Aplica efectos SIN apilar: una sola instancia por familia (stun, sangrado, dolor, quema…).
+ * Re-aplicar REFRESCA la duración (a la mayor) y conserva la intensidad MÁS FUERTE.
+ * Nunca acumula daño ni degrada → imposible de explotar (spammear solo mantiene el efecto vivo).
+ */
+export function applyModifiers(target: { modifiers: Modifier[] }, incoming: Modifier[]): void {
+  if (!Array.isArray(target.modifiers)) target.modifiers = [];
+  for (const m of incoming) {
+    const fam = modFamily(m);
+    const existing = target.modifiers.find((x) => modFamily(x) === fam);
+    if (!existing) { target.modifiers.push({ ...m }); continue; }
+    existing.duration = Math.max(existing.duration, m.duration);   // refresca la duración
+    if (m.kind === "dot") {                                        // conserva el sangrado/quema más fuerte
+      if ((m.dmg ?? 0) > (existing.dmg ?? 0)) {
+        existing.dmg = m.dmg; existing.dotSpec = m.dotSpec;
+        existing.name = m.name; existing.label = m.label; existing.crit = m.crit;
+      }
+    }
+    // skip (aturdido) y stat (dolor): solo se refresca la duración; su magnitud es fija por efecto.
+  }
+}
+
 export const knockdown = (): Modifier => ({ name: "knockdown", label: "aturdido", kind: "skip", duration: 1 });
 
 // Sangrado: % de vida MÁXIMA del que sangra, por turno, durante turnos fijos.
