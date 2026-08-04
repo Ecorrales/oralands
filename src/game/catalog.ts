@@ -71,6 +71,8 @@ export const SHOP_WEAPONS: WeaponOpt[] = [
   { id: "club",   name: "Garrote", damage: "1d4", accuracy: "1d6", abilities: ["smash"], req: {}, note: "contundente", price: 12 },
   { id: "dagger", name: "Daga",    damage: "1d3", accuracy: "1d6", abilities: ["quick_stab", "quick_cut"], req: {}, note: "rápida", price: 12 },
   { id: "rapier", name: "Estoque", damage: "1d6", accuracy: "3d5", abilities: ["stab", "quick_stab"], req: { dexterity: 7 }, note: "precisa", price: 35 },
+  { id: "spear",  name: "Lanza",   damage: "1d8", accuracy: "2d6", abilities: ["quick_stab", "smash"], req: { strength: 6 }, note: "alcance, versátil", price: 40, twoHanded: true },
+  { id: "axe",    name: "Hacha",   damage: "1d10", accuracy: "1d6", abilities: ["smash", "cut"], req: { strength: 6 }, note: "pesada, tosca", price: 42 },
   { id: "sword",  name: "Espada",  damage: "2d4", accuracy: "2d5", abilities: ["cut", "stab"], req: { strength: 5, dexterity: 5 }, note: "versátil", price: 45 },
 ];
 // Armaduras básicas (ligeras). Las pesadas/finas son de forja o botín.
